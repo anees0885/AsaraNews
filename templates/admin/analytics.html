@@ -1,0 +1,46 @@
+{% extends 'admin/base_admin.html' %}
+{% block admin_title %}Analytics{% endblock %}
+{% block page_title %}📈 Analytics Dashboard{% endblock %}
+{% block admin_content %}
+<div class="stats-grid">
+    <div class="stat-card stat-blue"><div class="stat-icon">👥</div><div class="stat-info"><span class="stat-value">{{ stats.total_users }}</span><span class="stat-label">Total Users</span></div></div>
+    <div class="stat-card stat-green"><div class="stat-icon">📰</div><div class="stat-info"><span class="stat-value">{{ stats.total_news }}</span><span class="stat-label">Published News</span></div></div>
+    <div class="stat-card stat-amber"><div class="stat-icon">📊</div><div class="stat-info"><span class="stat-value">{{ stats.approval_ratio }}%</span><span class="stat-label">Approval Ratio</span></div></div>
+    <div class="stat-card stat-purple"><div class="stat-icon">👁️</div><div class="stat-info"><span class="stat-value">{{ stats.total_views }}</span><span class="stat-label">Total Views</span></div></div>
+    <div class="stat-card stat-teal"><div class="stat-icon">❤️</div><div class="stat-info"><span class="stat-value">{{ stats.total_likes }}</span><span class="stat-label">Total Likes</span></div></div>
+    <div class="stat-card stat-red"><div class="stat-icon">💬</div><div class="stat-info"><span class="stat-value">{{ stats.total_comments }}</span><span class="stat-label">Total Comments</span></div></div>
+</div>
+
+<div class="admin-grid-2">
+    <div class="admin-panel">
+        <h2 class="panel-title">🏆 Most Viewed News</h2>
+        {% for news in most_viewed %}
+        <div class="list-item"><div class="list-item-info"><strong>{{ news.title[:45] }}...</strong><span class="list-meta">👁️ {{ news.view_count }} · ❤️ {{ news.like_count }}</span></div></div>
+        {% endfor %}
+    </div>
+    <div class="admin-panel">
+        <h2 class="panel-title">📂 Category Distribution</h2>
+        {% for cs in cat_stats %}
+        <div class="cat-stat-row">
+            <span>{{ cs.icon }} {{ cs.name }}</span>
+            <div class="bar-wrap"><div class="bar-fill" style="width: {{ (cs.count / (cat_stats[0].count or 1)) * 100 }}%"></div></div>
+            <span class="bar-count">{{ cs.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="admin-panel">
+    <h2 class="panel-title">📊 Daily Submissions (Last 30 Days)</h2>
+    <div class="chart-container">
+        <div class="bar-chart" id="dailyChart">
+            {% for d in daily_data %}
+            <div class="chart-bar-group">
+                <div class="chart-bar" style="height: {{ ((d.count / ([x.count for x in daily_data]|max or 1)) * 120)|int }}px" title="{{ d.date }}: {{ d.count }} submissions"></div>
+                <span class="chart-label">{{ d.date[:2] }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

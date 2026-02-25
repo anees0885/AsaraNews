@@ -1,0 +1,52 @@
+{% extends 'admin/base_admin.html' %}
+{% block admin_title %}Moderation{% endblock %}
+{% block page_title %}🔍 Content Moderation{% endblock %}
+
+{% block admin_content %}
+<div class="filter-bar">
+    <a href="?status=pending" class="filter-chip {% if status_filter == 'pending' %}active{% endif %}">⏳ Pending</a>
+    <a href="?status=approved" class="filter-chip {% if status_filter == 'approved' %}active{% endif %}">✅ Approved</a>
+    <a href="?status=rejected" class="filter-chip {% if status_filter == 'rejected' %}active{% endif %}">❌ Rejected</a>
+    <a href="?status=all" class="filter-chip {% if status_filter == 'all' %}active{% endif %}">📋 All</a>
+</div>
+
+<div class="data-table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr><th>Risk</th><th>Title</th><th>Author</th><th>Category</th><th>AI Scores</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for article in news.items %}
+            <tr>
+                <td><span class="risk-badge {% if article.final_risk_score >= 70 %}risk-high{% elif article.final_risk_score >= 40 %}risk-medium{% else %}risk-low{% endif %}">{{ article.final_risk_score|int }}</span></td>
+                <td class="title-cell"><strong>{{ article.title[:50] }}{% if article.title|length > 50 %}...{% endif %}</strong></td>
+                <td>{{ article.author.username }}</td>
+                <td>{{ article.category.icon }} {{ article.category.name }}</td>
+                <td class="scores-cell">
+                    <span title="AI Generated">🤖 {{ article.ai_score|int }}</span>
+                    <span title="Similarity">📄 {{ article.similarity_score|int }}</span>
+                    <span title="Keywords">🔑 {{ article.keyword_score|int }}</span>
+                </td>
+                <td><span class="status-badge status-{{ article.status }}">{{ article.status|upper }}</span></td>
+                <td>{{ article.created_at|timeago }}</td>
+                <td class="actions-cell">
+                    {% if article.status == 'pending' %}
+                    <form method="POST" action="{{ url_for('admin.moderate_action', news_id=article.id, action='approve') }}" style="display:inline"><button class="btn btn-xs btn-green" title="Approve">✓</button></form>
+                    <form method="POST" action="{{ url_for('admin.moderate_action', news_id=article.id, action='reject') }}" style="display:inline"><input type="hidden" name="notes" value=""><button class="btn btn-xs btn-red" title="Reject">✕</button></form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('admin.moderate_action', news_id=article.id, action='takedown') }}" style="display:inline"><button class="btn btn-xs btn-dark" title="Takedown + Strike">⚡</button></form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if news.has_next or news.has_prev %}
+<div class="pagination">
+    {% if news.has_prev %}<a href="?status={{ status_filter }}&page={{ news.prev_num }}" class="page-btn">←</a>{% endif %}
+    {% for p in news.iter_pages() %}{% if p %}<a href="?status={{ status_filter }}&page={{ p }}" class="page-btn {% if p == news.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="page-dots">...</span>{% endif %}{% endfor %}
+    {% if news.has_next %}<a href="?status={{ status_filter }}&page={{ news.next_num }}" class="page-btn">→</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

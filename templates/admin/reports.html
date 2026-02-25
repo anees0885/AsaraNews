@@ -1,0 +1,29 @@
+{% extends 'admin/base_admin.html' %}
+{% block admin_title %}Reports{% endblock %}
+{% block page_title %}🚩 Reported Content{% endblock %}
+{% block admin_content %}
+<div class="data-table-wrap">
+    <table class="data-table">
+        <thead><tr><th>News</th><th>Reported By</th><th>Reason</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>
+            {% for report in reports.items %}
+            <tr>
+                <td><strong>{{ report.news.title[:40] }}...</strong></td>
+                <td>{{ report.reporter.username }}</td>
+                <td>{{ report.reason[:60] }}</td>
+                <td><span class="status-badge status-{{ report.status }}">{{ report.status|upper }}</span></td>
+                <td>{{ report.created_at|timeago }}</td>
+                <td class="actions-cell">
+                    {% if report.status == 'pending' %}
+                    <form method="POST" action="{{ url_for('admin.report_action', report_id=report.id) }}" style="display:inline"><input type="hidden" name="action" value="reviewed"><button class="btn btn-xs btn-green">✓ Review</button></form>
+                    <form method="POST" action="{{ url_for('admin.report_action', report_id=report.id) }}" style="display:inline"><input type="hidden" name="action" value="dismiss"><button class="btn btn-xs btn-outline">Dismiss</button></form>
+                    <form method="POST" action="{{ url_for('admin.report_action', report_id=report.id) }}" style="display:inline"><input type="hidden" name="action" value="takedown"><button class="btn btn-xs btn-red">⚡ Takedown</button></form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if not reports.items %}<div class="empty-state"><span class="empty-icon">✅</span><h3>No reports</h3></div>{% endif %}
+{% endblock %}

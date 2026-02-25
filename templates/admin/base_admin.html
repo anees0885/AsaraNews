@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block admin_title %}Dashboard{% endblock %} | Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="admin-body">
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-brand">
+                <span class="brand-icon">📰</span>
+                <span class="brand-name">Asara</span>
+                <span class="brand-tag">ADMIN</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">📊 Dashboard</a>
+                <a href="{{ url_for('admin.moderation') }}" class="sidebar-link {% if request.endpoint == 'admin.moderation' %}active{% endif %}">
+                    🔍 Moderation
+                    {% set pending_count = pending_count|default(0) %}
+                </a>
+                <a href="{{ url_for('admin.users') }}" class="sidebar-link {% if request.endpoint == 'admin.users' %}active{% endif %}">👥 Users</a>
+                <a href="{{ url_for('admin.categories') }}" class="sidebar-link {% if request.endpoint == 'admin.categories' %}active{% endif %}">📂 Categories</a>
+                <a href="{{ url_for('admin.events') }}" class="sidebar-link {% if request.endpoint == 'admin.events' %}active{% endif %}">📅 Events</a>
+                <a href="{{ url_for('admin.polls') }}" class="sidebar-link {% if request.endpoint == 'admin.polls' %}active{% endif %}">📊 Polls</a>
+                <a href="{{ url_for('admin.reports') }}" class="sidebar-link {% if request.endpoint == 'admin.reports' %}active{% endif %}">🚩 Reports</a>
+                <a href="{{ url_for('admin.analytics') }}" class="sidebar-link {% if request.endpoint == 'admin.analytics' %}active{% endif %}">📈 Analytics</a>
+                {% if current_user.role == 'super_admin' %}
+                <a href="{{ url_for('admin.settings') }}" class="sidebar-link {% if request.endpoint == 'admin.settings' %}active{% endif %}">⚙️ Settings & Logs</a>
+                {% endif %}
+                <div class="sidebar-divider"></div>
+                <a href="{{ url_for('public.index') }}" class="sidebar-link">🌐 View Website</a>
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-link logout-link">🚪 Logout</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-main">
+            <header class="admin-header">
+                <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+                <h1 class="admin-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="admin-user">
+                    <span>{{ current_user.username }}</span>
+                    <span class="role-badge">{{ current_user.role|upper }}</span>
+                </div>
+            </header>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="admin-flash">
+                {% for category, message in messages %}
+                <div class="flash-msg flash-{{ category }}">{{ message }}<button class="flash-close" onclick="this.parentElement.remove()">✕</button></div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="admin-content">
+                {% block admin_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    {% block admin_js %}{% endblock %}
+</body>
+</html>

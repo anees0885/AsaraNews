@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Reporter Dashboard{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/reporter.css') }}">{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="reporter-header">
+        <div class="reporter-welcome">
+            <h1>👋 Welcome, {{ current_user.username }}</h1>
+            <p>Verified Reporter Dashboard</p>
+        </div>
+        <div class="reporter-actions">
+            <a href="{{ url_for('news.submit') }}" class="btn btn-accent">✍️ Submit News</a>
+            <a href="{{ url_for('reporter.notifications') }}" class="btn btn-outline">🔔 Notifications {% if unread_count > 0 %}<span class="badge">{{ unread_count }}</span>{% endif %}</a>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="reporter-stats">
+        <div class="r-stat-card"><span class="r-stat-icon">📝</span><span class="r-stat-value">{{ stats.total_submissions }}</span><span class="r-stat-label">Total Submissions</span></div>
+        <div class="r-stat-card green"><span class="r-stat-icon">✅</span><span class="r-stat-value">{{ stats.approved }}</span><span class="r-stat-label">Approved</span></div>
+        <div class="r-stat-card red"><span class="r-stat-icon">❌</span><span class="r-stat-value">{{ stats.rejected }}</span><span class="r-stat-label">Rejected</span></div>
+        <div class="r-stat-card amber"><span class="r-stat-icon">⏳</span><span class="r-stat-value">{{ stats.pending }}</span><span class="r-stat-label">Pending</span></div>
+        <div class="r-stat-card blue"><span class="r-stat-icon">👁️</span><span class="r-stat-value">{{ stats.total_views }}</span><span class="r-stat-label">Total Views</span></div>
+        <div class="r-stat-card purple"><span class="r-stat-icon">❤️</span><span class="r-stat-value">{{ stats.total_likes }}</span><span class="r-stat-label">Total Likes</span></div>
+        <div class="r-stat-card teal"><span class="r-stat-icon">💬</span><span class="r-stat-value">{{ stats.total_comments }}</span><span class="r-stat-label">Comments</span></div>
+        <div class="r-stat-card {% if stats.strike_count >= 3 %}red{% endif %}"><span class="r-stat-icon">⚡</span><span class="r-stat-value">{{ stats.strike_count }}</span><span class="r-stat-label">Strikes</span></div>
+    </div>
+
+    {% if stats.strike_count >= 3 %}
+    <div class="strike-warning">⚠️ Warning: You have {{ stats.strike_count }} strikes. 3 strikes = temporary suspension, 5 = permanent ban.</div>
+    {% endif %}
+
+    <div class="reporter-grid">
+        <!-- Notifications Panel -->
+        {% if show_notifications is defined and show_notifications %}
+        <div class="reporter-panel full-width">
+            <h2 class="panel-title">🔔 Notifications</h2>
+            {% if notifications and notifications.items %}
+            {% for notif in notifications.items %}
+            <div class="notif-item {% if not notif.is_read %}unread{% endif %}">
+                <span class="notif-type">{{ '📩' if notif.type == 'submission_status' else '⚡' if notif.type == 'strike' else '🔔' }}</span>
+                <div class="notif-info">
+                    <strong>{{ notif.title }}</strong>
+                    <p>{{ notif.message }}</p>
+                    <span class="notif-time">{{ notif.created_at|timeago }}</span>
+                </div>
+                {% if notif.link %}<a href="{{ notif.link }}" class="btn btn-sm btn-outline">View</a>{% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="panel-empty">No notifications</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Recent Submissions -->
+        <div class="reporter-panel">
+            <h2 class="panel-title">📋 Recent Submissions</h2>
+            {% for news in submissions %}
+            <div class="submission-item">
+                <div class="submission-info">
+                    <strong>{{ news.title[:50] }}{% if news.title|length > 50 %}...{% endif %}</strong>
+                    <span class="submission-meta">{{ news.category.icon }} {{ news.category.name }} · {{ news.created_at|timeago }}</span>
+                </div>
+                <span class="status-pill status-{{ news.status }}">{{ news.status|upper }}</span>
+                {% if news.status in ('pending', 'rejected') %}
+                <a href="{{ url_for('news.edit', news_id=news.id) }}" class="btn btn-xs btn-outline">Edit</a>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% if not submissions %}<p class="panel-empty">No submissions yet. <a href="{{ url_for('news.submit') }}">Submit your first news!</a></p>{% endif %}
+        </div>
+
+        <!-- Top Performing -->
+        <div class="reporter-panel">
+            <h2 class="panel-title">🏆 Top Performing</h2>
+            {% for news in top_news %}
+            <a href="{{ url_for('news.detail', slug=news.slug) }}" class="top-news-item">
+                <strong>{{ news.title[:45] }}...</strong>
+                <div class="top-news-stats">
+                    <span>👁️ {{ news.view_count }}</span>
+                    <span>❤️ {{ news.like_count }}</span>
+                    <span>💬 {{ news.comment_count }}</span>
+                </div>
+            </a>
+            {% endfor %}
+            {% if not top_news %}<p class="panel-empty">Publish news to see your top performers!</p>{% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

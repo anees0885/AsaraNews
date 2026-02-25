@@ -1,0 +1,78 @@
+{% extends 'admin/base_admin.html' %}
+{% block admin_title %}Dashboard{% endblock %}
+{% block page_title %}📊 Dashboard Overview{% endblock %}
+
+{% block admin_content %}
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card stat-blue"><div class="stat-icon">👥</div><div class="stat-info"><span class="stat-value">{{ stats.total_users }}</span><span class="stat-label">Total Users</span></div></div>
+    <div class="stat-card stat-green"><div class="stat-icon">📰</div><div class="stat-info"><span class="stat-value">{{ stats.approved_news }}</span><span class="stat-label">Published News</span></div></div>
+    <div class="stat-card stat-amber"><div class="stat-icon">⏳</div><div class="stat-info"><span class="stat-value">{{ stats.pending_news }}</span><span class="stat-label">Pending Review</span></div></div>
+    <div class="stat-card stat-red"><div class="stat-icon">🚩</div><div class="stat-info"><span class="stat-value">{{ stats.reports_pending }}</span><span class="stat-label">Reports Pending</span></div></div>
+    <div class="stat-card stat-purple"><div class="stat-icon">📝</div><div class="stat-info"><span class="stat-value">{{ stats.today_submissions }}</span><span class="stat-label">Today's Submissions</span></div></div>
+    <div class="stat-card stat-teal"><div class="stat-icon">🎤</div><div class="stat-info"><span class="stat-value">{{ stats.total_reporters }}</span><span class="stat-label">Reporters</span></div></div>
+</div>
+
+<div class="admin-grid-2">
+    <!-- High Risk Alerts -->
+    <div class="admin-panel">
+        <h2 class="panel-title">🚨 High Risk Alerts</h2>
+        {% if high_risk %}
+        <div class="alert-list">
+            {% for news in high_risk %}
+            <div class="alert-item">
+                <div class="risk-badge risk-high">{{ news.final_risk_score|int }}</div>
+                <div class="alert-info">
+                    <strong>{{ news.title[:60] }}...</strong>
+                    <span>By {{ news.author.username }} · {{ news.created_at|timeago }}</span>
+                </div>
+                <a href="{{ url_for('admin.moderation') }}" class="btn btn-sm btn-outline">Review</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="panel-empty">✅ No high risk alerts</p>
+        {% endif %}
+    </div>
+
+    <!-- Pending Moderation -->
+    <div class="admin-panel">
+        <h2 class="panel-title">⏳ Pending Moderation</h2>
+        {% if pending %}
+        <div class="pending-list">
+            {% for news in pending %}
+            <div class="pending-item">
+                <div class="risk-badge {% if news.final_risk_score >= 70 %}risk-high{% elif news.final_risk_score >= 40 %}risk-medium{% else %}risk-low{% endif %}">{{ news.final_risk_score|int }}</div>
+                <div class="pending-info">
+                    <strong>{{ news.title[:50] }}...</strong>
+                    <span>{{ news.author.username }} · {{ news.category.name }}</span>
+                </div>
+                <div class="pending-actions">
+                    <form method="POST" action="{{ url_for('admin.moderate_action', news_id=news.id, action='approve') }}" style="display:inline"><button class="btn btn-sm btn-green">✓</button></form>
+                    <form method="POST" action="{{ url_for('admin.moderate_action', news_id=news.id, action='reject') }}" style="display:inline"><button class="btn btn-sm btn-red">✕</button></form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <a href="{{ url_for('admin.moderation') }}" class="panel-link">View All →</a>
+        {% else %}
+        <p class="panel-empty">✅ No pending items</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="admin-panel">
+    <h2 class="panel-title">🕐 Recent Activity</h2>
+    <div class="activity-feed">
+        {% for log in recent_logs %}
+        <div class="activity-item">
+            <span class="activity-action">{{ log.action }}</span>
+            <span class="activity-detail">{{ log.details[:80] if log.details else '' }}</span>
+            <span class="activity-time">{{ log.created_at|timeago }}</span>
+        </div>
+        {% endfor %}
+        {% if not recent_logs %}<p class="panel-empty">No recent activity</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

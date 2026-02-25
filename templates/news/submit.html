@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Submit News{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header"><span class="page-icon">✍️</span><h1>Submit News</h1><p>Share what's happening in your village</p></div>
+    <div class="form-card">
+        <form method="POST" enctype="multipart/form-data" class="submit-form">
+            <div class="form-row">
+                <div class="form-group full">
+                    <label>📌 Title *</label>
+                    <input type="text" name="title" required minlength="10" maxlength="256" placeholder="Enter a clear, descriptive title" value="{{ title|default('') }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group full">
+                    <label>📝 Short Description *</label>
+                    <textarea name="description" required minlength="20" rows="2" placeholder="Brief summary of the news (20+ characters)">{{ description|default('') }}</textarea>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group full">
+                    <label>📰 Full Content *</label>
+                    <textarea name="content" required minlength="50" rows="10" placeholder="Write the complete news story (50+ characters)">{{ content|default('') }}</textarea>
+                </div>
+            </div>
+            <div class="form-row two-col">
+                <div class="form-group">
+                    <label>📂 Category *</label>
+                    <select name="category_id" required>
+                        <option value="">Select category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📍 Location *</label>
+                    <input type="text" name="location" required placeholder="Village area/locality" value="{{ location|default('') }}">
+                </div>
+            </div>
+            <div class="form-row two-col">
+                <div class="form-group">
+                    <label>📅 Event Date</label>
+                    <input type="date" name="event_date">
+                </div>
+                <div class="form-group">
+                    <label>🏷️ Tags</label>
+                    <input type="text" name="tags" placeholder="Comma-separated tags" value="{{ tags|default('') }}">
+                </div>
+            </div>
+            <div class="form-row two-col">
+                <div class="form-group">
+                    <label>🖼️ Featured Image</label>
+                    <input type="file" name="featured_image" accept="image/*" class="file-input">
+                </div>
+                <div class="form-group">
+                    <label>📹 Video URL (YouTube/embed)</label>
+                    <input type="url" name="video_url" placeholder="https://..." value="{{ video_url|default('') }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group full">
+                    <label>📷 Gallery Images (multiple)</label>
+                    <input type="file" name="gallery_images" accept="image/*" multiple class="file-input">
+                </div>
+            </div>
+            <div class="form-info-box">
+                <p>🤖 <strong>AI Moderation:</strong> Your submission will be automatically analyzed for quality and authenticity. Low-risk content from verified reporters may be auto-published. Otherwise, it will go to admin review.</p>
+            </div>
+            <button type="submit" class="btn btn-accent btn-lg">Submit for Review →</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

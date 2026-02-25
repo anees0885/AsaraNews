@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Community Posts{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <i class="fa-solid fa-newspaper page-icon" style="color:#7c3aed"></i>
+        <h1>Community Feed</h1>
+        <p>Quick updates and posts from the community</p>
+    </div>
+
+    <div class="posts-feed-layout">
+        <div class="posts-list">
+            {% if posts.items %}
+                {% for post in posts.items %}
+                <div class="post-card">
+                    <div class="post-card-header">
+                        <div class="author-avatar" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">{{ post.author.username[0]|upper }}</div>
+                        <div>
+                            <strong>{{ post.author.username }}</strong>
+                            <small>{{ post.created_at|timeago }}</small>
+                        </div>
+                        {% if current_user.is_authenticated and (current_user.id == post.user_id or current_user.role in ('admin', 'super_admin')) %}
+                        <form method="POST" action="{{ url_for('community.delete_post', post_id=post.id) }}" style="margin-left:auto">
+                            <button type="submit" class="post-delete-btn" onclick="return confirm('Delete this post?')" title="Delete">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+
+                    <div class="post-card-content">
+                        <p>{{ post.content }}</p>
+                    </div>
+
+                    {% if post.image %}
+                    <div class="post-card-image">
+                        <img src="{{ url_for('static', filename='uploads/posts/' + post.image) }}" alt="Post image">
+                    </div>
+                    {% endif %}
+
+                    <div class="post-card-actions">
+                        <button class="post-action-btn" onclick="likePost({{ post.id }}, this)">
+                            <i class="fa-solid fa-heart"></i> <span>{{ post.like_count }}</span>
+                        </button>
+                        <span class="post-action-btn">
+                            <i class="fa-solid fa-share-nodes"></i> Share
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if posts.has_next or posts.has_prev %}
+                <div class="pagination">
+                    {% if posts.has_prev %}
+                    <a href="?page={{ posts.prev_num }}" class="page-btn"><i class="fa-solid fa-chevron-left"></i></a>
+                    {% endif %}
+                    <span class="page-btn active">{{ posts.page }}</span>
+                    {% if posts.has_next %}
+                    <a href="?page={{ posts.next_num }}" class="page-btn"><i class="fa-solid fa-chevron-right"></i></a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% else %}
+            <div class="empty-state">
+                <i class="fa-solid fa-feather-pointed empty-icon" style="color:#7c3aed"></i>
+                <h3>No Posts Yet</h3>
+                <p>Be the first to share something with the community!</p>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('community.create_post') }}" class="btn btn-accent" style="margin-top:12px;background:linear-gradient(135deg,#8b5cf6,#7c3aed)">
+                    <i class="fa-solid fa-plus"></i> Create First Post
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <aside>
+            <div class="sidebar-widget cta-widget" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">
+                <div class="cta-content">
+                    <h3><i class="fa-solid fa-feather-pointed"></i> Share Something</h3>
+                    <p>Got news, thoughts, or updates? Post it!</p>
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('community.create_post') }}" class="btn btn-accent" style="background:linear-gradient(135deg,#fff,#f5f3ff);color:#7c3aed">
+                        <i class="fa-solid fa-plus"></i> Create Post
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="sidebar-widget">
+                <h3 class="widget-title"><i class="fa-solid fa-tower-broadcast" style="color:#dc2626"></i> Live Now</h3>
+                <a href="{{ url_for('community.live_streams') }}" class="widget-link"><i class="fa-solid fa-arrow-right"></i> View All Streams</a>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<script>
+function likePost(postId, btn) {
+    fetch(`/community/post/${postId}/like`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            btn.querySelector('span').textContent = data.likes;
+            btn.style.color = '#dc2626';
+        })
+        .catch(() => alert('Please login to like posts.'));
+}
+</script>
+{% endblock %}

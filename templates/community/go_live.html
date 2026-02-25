@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% block title %}Go Live{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <i class="fa-solid fa-tower-broadcast page-icon" style="color:#dc2626"></i>
+        <h1>Go Live</h1>
+        <p>Start a live broadcast and connect with your audience in real-time</p>
+    </div>
+
+    <div class="go-live-layout">
+        <!-- Camera Preview -->
+        <div class="camera-preview-card">
+            <div class="camera-preview" id="cameraPreview">
+                <video id="localPreview" autoplay muted playsinline></video>
+                <div class="camera-placeholder" id="cameraPlaceholder">
+                    <i class="fa-solid fa-video fa-3x"></i>
+                    <p>Camera preview will appear here</p>
+                    <button type="button" class="btn btn-accent" id="startCameraBtn" style="margin-top:12px;background:linear-gradient(135deg,#dc2626,#ef4444)">
+                        <i class="fa-solid fa-camera"></i> Enable Camera
+                    </button>
+                </div>
+                <div class="camera-controls" id="cameraControls" style="display:none">
+                    <button type="button" class="cam-ctrl-btn" id="toggleCamBtn" title="Toggle Camera">
+                        <i class="fa-solid fa-video"></i>
+                    </button>
+                    <button type="button" class="cam-ctrl-btn" id="toggleMicBtn" title="Toggle Microphone">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <button type="button" class="cam-ctrl-btn" id="flipCamBtn" title="Flip Camera">
+                        <i class="fa-solid fa-camera-rotate"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stream Setup Form -->
+        <div class="form-card">
+            <h3 style="margin-bottom:16px;font-family:var(--font-display)"><i class="fa-solid fa-gear" style="color:var(--accent)"></i> Stream Settings</h3>
+
+            <form method="POST" class="submit-form" id="goLiveForm">
+                <div class="form-info-box" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">
+                    <i class="fa-solid fa-circle-info"></i> Your live video stream will be broadcast to all users on the platform in real-time.
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-heading" style="color:#dc2626"></i> Stream Title *</label>
+                    <input type="text" name="title" id="streamTitle" placeholder="What's your live stream about?" required maxlength="256">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-align-left" style="color:#3b82f6"></i> Description (Optional)</label>
+                    <textarea name="description" rows="3" placeholder="Tell viewers what to expect..."></textarea>
+                </div>
+
+                <div class="stream-checklist">
+                    <div class="check-item" id="checkCamera">
+                        <i class="fa-solid fa-circle-xmark" style="color:var(--text-muted)"></i>
+                        <span>Camera enabled</span>
+                    </div>
+                    <div class="check-item" id="checkMic">
+                        <i class="fa-solid fa-circle-xmark" style="color:var(--text-muted)"></i>
+                        <span>Microphone enabled</span>
+                    </div>
+                    <div class="check-item" id="checkTitle">
+                        <i class="fa-solid fa-circle-xmark" style="color:var(--text-muted)"></i>
+                        <span>Title added</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-full btn-lg" id="goLiveBtn" style="background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff" disabled>
+                    <i class="fa-solid fa-tower-broadcast"></i> Go Live Now
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let localStream = null;
+let cameraEnabled = false;
+let micEnabled = false;
+let facingMode = 'user';
+
+const video = document.getElementById('localPreview');
+const placeholder = document.getElementById('cameraPlaceholder');
+const controls = document.getElementById('cameraControls');
+const startBtn = document.getElementById('startCameraBtn');
+const toggleCam = document.getElementById('toggleCamBtn');
+const toggleMic = document.getElementById('toggleMicBtn');
+const flipCam = document.getElementById('flipCamBtn');
+const titleInput = document.getElementById('streamTitle');
+const goLiveBtn = document.getElementById('goLiveBtn');
+
+function updateChecklist() {
+    const camCheck = document.querySelector('#checkCamera i');
+    const micCheck = document.querySelector('#checkMic i');
+    const titleCheck = document.querySelector('#checkTitle i');
+
+    if (cameraEnabled) {
+        camCheck.className = 'fa-solid fa-circle-check';
+        camCheck.style.color = '#22c55e';
+    } else {
+        camCheck.className = 'fa-solid fa-circle-xmark';
+        camCheck.style.color = 'var(--text-muted)';
+    }
+    if (micEnabled) {
+        micCheck.className = 'fa-solid fa-circle-check';
+        micCheck.style.color = '#22c55e';
+    } else {
+        micCheck.className = 'fa-solid fa-circle-xmark';
+        micCheck.style.color = 'var(--text-muted)';
+    }
+    if (titleInput.value.trim().length > 0) {
+        titleCheck.className = 'fa-solid fa-circle-check';
+        titleCheck.style.color = '#22c55e';
+    } else {
+        titleCheck.className = 'fa-solid fa-circle-xmark';
+        titleCheck.style.color = 'var(--text-muted)';
+    }
+
+    goLiveBtn.disabled = !(cameraEnabled && titleInput.value.trim().length > 0);
+}
+
+async function startCamera() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: true
+        });
+        video.srcObject = localStream;
+        placeholder.style.display = 'none';
+        controls.style.display = 'flex';
+        cameraEnabled = true;
+        micEnabled = true;
+        updateChecklist();
+    } catch (err) {
+        alert('Camera/Microphone access denied. Please allow access in your browser settings.');
+        console.error('getUserMedia error:', err);
+    }
+}
+
+startBtn.addEventListener('click', startCamera);
+
+toggleCam.addEventListener('click', () => {
+    if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.enabled = !videoTrack.enabled;
+            cameraEnabled = videoTrack.enabled;
+            toggleCam.innerHTML = cameraEnabled ?
+                '<i class="fa-solid fa-video"></i>' :
+                '<i class="fa-solid fa-video-slash"></i>';
+            toggleCam.classList.toggle('off', !cameraEnabled);
+            updateChecklist();
+        }
+    }
+});
+
+toggleMic.addEventListener('click', () => {
+    if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            micEnabled = audioTrack.enabled;
+            toggleMic.innerHTML = micEnabled ?
+                '<i class="fa-solid fa-microphone"></i>' :
+                '<i class="fa-solid fa-microphone-slash"></i>';
+            toggleMic.classList.toggle('off', !micEnabled);
+            updateChecklist();
+        }
+    }
+});
+
+flipCam.addEventListener('click', async () => {
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+    if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        await startCamera();
+    }
+});
+
+titleInput.addEventListener('input', updateChecklist);
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}{{ category.name }}{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <span class="page-icon">{{ category.icon }}</span>
+        <h1>{{ category.name }}</h1>
+        {% if category.description %}<p>{{ category.description }}</p>{% endif %}
+    </div>
+
+    <div class="content-grid">
+        <div class="feed-main">
+            <div class="news-grid">
+                {% for article in news.items %}
+                <a href="{{ url_for('news.detail', slug=article.slug) }}" class="news-card">
+                    <div class="news-card-img" style="background-image: url('{{ url_for('static', filename=article.featured_image) if article.featured_image else '' }}')">
+                        <span class="news-card-cat">{{ article.category.icon }} {{ article.category.name }}</span>
+                    </div>
+                    <div class="news-card-body">
+                        <h3 class="news-card-title">{{ article.title }}</h3>
+                        <p class="news-card-desc">{{ article.description[:120] }}...</p>
+                        <div class="news-card-meta">
+                            <span>👤 {{ article.author.username }}</span>
+                            <span>{{ article.created_at|timeago }}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+                {% if not news.items %}
+                <div class="empty-state">
+                    <span class="empty-icon">📭</span>
+                    <h3>No news in this category yet</h3>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if news.has_next or news.has_prev %}
+            <div class="pagination">
+                {% if news.has_prev %}<a href="?page={{ news.prev_num }}" class="page-btn">← Previous</a>{% endif %}
+                {% for p in news.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}<a href="?page={{ p }}" class="page-btn {% if p == news.page %}active{% endif %}">{{ p }}</a>
+                    {% else %}<span class="page-dots">...</span>{% endif %}
+                {% endfor %}
+                {% if news.has_next %}<a href="?page={{ news.next_num }}" class="page-btn">Next →</a>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <aside class="sidebar">
+            <div class="sidebar-widget">
+                <h3 class="widget-title">📂 All Categories</h3>
+                {% for cat in categories %}
+                <a href="{{ url_for('public.category', slug=cat.slug) }}" class="category-link {% if cat.id == category.id %}active{% endif %}">
+                    {{ cat.icon }} {{ cat.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

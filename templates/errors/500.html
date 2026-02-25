@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}500 - Server Error{% endblock %}
+{% block content %}
+<div class="error-page"><span class="error-code">500</span><h1>Internal Server Error</h1><p>Something went wrong. Please try again later.</p><a href="{{ url_for('public.index') }}" class="btn btn-accent">← Back to Home</a></div>
+{% endblock %}

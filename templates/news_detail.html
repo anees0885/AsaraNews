@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% block title %}{{ article.title }}{% endblock %}
+{% block meta_desc %}{{ article.description[:160] }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="article-layout">
+        <article class="article-main">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="{{ url_for('public.index') }}">Home</a> /
+                <a href="{{ url_for('public.category', slug=article.category.slug) }}">{{ article.category.name }}</a> /
+                <span>{{ article.title[:50] }}...</span>
+            </div>
+
+            <header class="article-header">
+                <span class="article-cat-badge">{{ article.category.icon }} {{ article.category.name }}</span>
+                <h1 class="article-title">{{ article.title }}</h1>
+                <p class="article-desc">{{ article.description }}</p>
+
+                <div class="article-meta-bar">
+                    <div class="author-info">
+                        <div class="author-avatar">{{ article.author.username[0]|upper }}</div>
+                        <div>
+                            <strong>{{ article.author.username }}</strong>
+                            <span class="article-date">{{ article.created_at.strftime('%d %B %Y, %I:%M %p') }}</span>
+                        </div>
+                    </div>
+                    <div class="article-stats-bar">
+                        <span>👁️ {{ article.view_count }} views</span>
+                        <span>❤️ {{ article.like_count }} likes</span>
+                        <span>💬 {{ article.comment_count }} comments</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Featured Image -->
+            {% if article.featured_image %}
+            <div class="article-featured-img">
+                <img src="{{ url_for('static', filename=article.featured_image) }}" alt="{{ article.title }}">
+            </div>
+            {% endif %}
+
+            <!-- Content -->
+            <div class="article-content">
+                {{ article.content|safe }}
+            </div>
+
+            <!-- Tags -->
+            {% if article.get_tags_list() %}
+            <div class="article-tags">
+                {% for tag in article.get_tags_list() %}
+                <a href="{{ url_for('public.search', q=tag) }}" class="tag-pill">🏷️ {{ tag }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Video Embed -->
+            {% if article.video_url %}
+            <div class="article-video">
+                <h3>📹 Video</h3>
+                <div class="video-wrapper">
+                    <iframe src="{{ article.video_url }}" allowfullscreen></iframe>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Image Gallery -->
+            {% set gallery_images = article.images.all() %}
+            {% if gallery_images %}
+            <div class="article-gallery">
+                <h3>📷 Photo Gallery</h3>
+                <div class="gallery-grid">
+                    {% for img in gallery_images %}
+                    <div class="gallery-item">
+                        <img src="{{ url_for('static', filename=img.image_path) }}" alt="{{ img.caption or 'Gallery image' }}" onclick="openLightbox(this.src)">
+                        {% if img.caption %}<span class="gallery-caption">{{ img.caption }}</span>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Article Actions -->
+            <div class="article-actions">
+                <button class="action-btn like-btn {% if user_liked %}liked{% endif %}" id="likeBtn" onclick="toggleLike({{ article.id }})">
+                    <span id="likeIcon">{{ '❤️' if user_liked else '🤍' }}</span>
+                    <span id="likeCount">{{ article.like_count }}</span> Likes
+                </button>
+                <button class="action-btn share-btn" onclick="shareArticle()">📤 Share</button>
+                {% if current_user.is_authenticated %}
+                <button class="action-btn report-btn" onclick="showReportModal()">🚩 Report</button>
+                {% endif %}
+            </div>
+
+            <!-- Location & Event Info -->
+            <div class="article-info-bar">
+                <span>📍 {{ article.location }}</span>
+                {% if article.event_date %}
+                <span>📅 Event: {{ article.event_date.strftime('%d %B %Y') }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Comments Section -->
+            <section class="comments-section" id="comments">
+                <h2 class="section-title"><span class="title-icon">💬</span> Comments ({{ comments|length }})</h2>
+
+                {% if current_user.is_authenticated %}
+                <form class="comment-form" action="{{ url_for('news.comment', news_id=article.id) }}" method="POST">
+                    <textarea name="content" placeholder="Write your comment..." required minlength="3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-accent">Post Comment</button>
+                </form>
+                {% else %}
+                <div class="login-prompt">
+                    <p>🔒 <a href="{{ url_for('auth.login') }}">Login</a> to post a comment.</p>
+                </div>
+                {% endif %}
+
+                <div class="comments-list">
+                    {% for comment in comments %}
+                    <div class="comment-card">
+                        <div class="comment-avatar">{{ comment.user.username[0]|upper }}</div>
+                        <div class="comment-body">
+                            <div class="comment-header">
+                                <strong>{{ comment.user.username }}</strong>
+                                <span class="comment-time">{{ comment.created_at|timeago }}</span>
+                            </div>
+                            <p class="comment-text">{{ comment.content }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not comments %}
+                    <p class="no-comments">No comments yet. Be the first to share your thoughts!</p>
+                    {% endif %}
+                </div>
+            </section>
+        </article>
+
+        <!-- Sidebar - Related News -->
+        <aside class="sidebar">
+            <div class="sidebar-widget">
+                <h3 class="widget-title">📰 Related News</h3>
+                {% for news in related %}
+                <a href="{{ url_for('news.detail', slug=news.slug) }}" class="related-card">
+                    <div class="related-img" style="background-image: url('{{ url_for('static', filename=news.featured_image) if news.featured_image else '' }}')"></div>
+                    <div class="related-info">
+                        <h4>{{ news.title }}</h4>
+                        <span>{{ news.created_at|timeago }}</span>
+                    </div>
+                </a>
+                {% endfor %}
+                {% if not related %}
+                <p class="widget-empty">No related news found.</p>
+                {% endif %}
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal" style="display:none;">
+    <div class="modal-content">
+        <h3>🚩 Report This Article</h3>
+        <textarea id="reportReason" placeholder="Why are you reporting this article?" rows="4"></textarea>
+        <div class="modal-actions">
+            <button class="btn btn-accent" onclick="submitReport({{ article.id }})">Submit Report</button>
+            <button class="btn btn-outline" onclick="document.getElementById('reportModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" style="display:none;" onclick="this.style.display='none'">
+    <img id="lightboxImg" src="">
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleLike(newsId) {
+    fetch(`/news/${newsId}/like`, {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}})
+    .then(r=>r.json()).then(data=>{
+        document.getElementById('likeIcon').textContent = data.liked ? '❤️' : '🤍';
+        document.getElementById('likeCount').textContent = data.count;
+        document.getElementById('likeBtn').classList.toggle('liked', data.liked);
+    });
+}
+function showReportModal(){ document.getElementById('reportModal').style.display='flex'; }
+function submitReport(newsId) {
+    const reason = document.getElementById('reportReason').value;
+    if(!reason) return alert('Please enter a reason.');
+    fetch(`/news/${newsId}/report`, {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},
+        body:'reason='+encodeURIComponent(reason)
+    }).then(r=>r.json()).then(data=>{
+        alert(data.message || data.error);
+        document.getElementById('reportModal').style.display='none';
+    });
+}
+function shareArticle() {
+    if(navigator.share) { navigator.share({title:'{{ article.title }}', url:window.location.href}); }
+    else { navigator.clipboard.writeText(window.location.href); alert('Link copied!'); }
+}
+function openLightbox(src) { document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').style.display='flex'; }
+</script>
+{% endblock %}

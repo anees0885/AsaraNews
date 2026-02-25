@@ -1,0 +1,32 @@
+{% extends 'admin/base_admin.html' %}
+{% block admin_title %}Polls{% endblock %}
+{% block page_title %}📊 Poll Management{% endblock %}
+{% block admin_content %}
+<div class="admin-grid-2">
+    <div class="admin-panel">
+        <h2 class="panel-title">➕ Create Poll</h2>
+        <form method="POST" class="admin-form">
+            <div class="form-group"><label>Question *</label><input type="text" name="question" required></div>
+            <div class="form-group"><label>Options (one per line) *</label><textarea name="options" rows="5" placeholder="Option 1&#10;Option 2&#10;Option 3" required></textarea></div>
+            <div class="form-group"><label>Expires At</label><input type="datetime-local" name="expires_at"></div>
+            <div class="form-group"><label><input type="checkbox" name="ip_restriction"> Restrict one vote per IP</label></div>
+            <button type="submit" class="btn btn-accent">Create Poll</button>
+        </form>
+    </div>
+    <div class="admin-panel">
+        <h2 class="panel-title">📋 All Polls ({{ polls|length }})</h2>
+        {% for poll in polls %}
+        <div class="list-item poll-item">
+            <div class="list-item-info">
+                <strong>{{ poll.question }}</strong>
+                <span class="list-meta">{{ poll.votes.count() }} votes · {% if poll.is_active %}🟢 Active{% else %}⚪ Inactive{% endif %} {% if poll.is_expired %}· ⏰ Expired{% endif %}</span>
+            </div>
+            <div class="list-item-actions">
+                <form method="POST" action="{{ url_for('admin.toggle_poll', poll_id=poll.id) }}"><button class="btn btn-xs btn-outline">{{ '⏸️' if poll.is_active else '▶️' }}</button></form>
+            </div>
+        </div>
+        {% endfor %}
+        {% if not polls %}<p class="panel-empty">No polls created yet</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

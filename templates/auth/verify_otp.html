@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Verify OTP{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <span class="auth-icon">📲</span>
+            <h1>Verify OTP</h1>
+            <p>Enter the OTP sent to {{ phone }}</p>
+        </div>
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label>🔑 Enter OTP</label>
+                <input type="text" name="otp" placeholder="6-digit OTP" required maxlength="6" class="otp-input" autocomplete="one-time-code">
+            </div>
+            <button type="submit" class="btn btn-accent btn-full">Verify & Create Account →</button>
+        </form>
+        <div class="auth-footer">
+            <p>Didn't receive? <a href="{{ url_for('auth.register') }}">Re-register</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

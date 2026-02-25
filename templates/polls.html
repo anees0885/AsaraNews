@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Polls{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header"><span class="page-icon">📊</span><h1>Community Polls</h1><p>Share your opinion on village matters</p></div>
+    <div class="polls-grid">
+        {% for poll in polls %}
+        <div class="poll-card" data-poll-id="{{ poll.id }}">
+            <h3 class="poll-question">{{ poll.question }}</h3>
+            {% if poll.expires_at %}<span class="poll-expiry">⏰ Expires: {{ poll.expires_at.strftime('%d %b %Y, %I:%M %p') }}</span>{% endif %}
+            <div class="poll-options">
+                {% for option in poll.get_options() %}
+                <button class="poll-option-btn" onclick="votePoll({{ poll.id }}, {{ loop.index0 }})">{{ option }}</button>
+                {% endfor %}
+            </div>
+            <div class="poll-results" id="pollResults{{ poll.id }}" style="display:none;"></div>
+            <div class="poll-meta"><span>Total votes: <strong id="pollTotal{{ poll.id }}">—</strong></span></div>
+        </div>
+        {% endfor %}
+        {% if not polls %}<div class="empty-state"><span class="empty-icon">📊</span><h3>No active polls</h3></div>{% endif %}
+    </div>
+</div>
+{% endblock %}

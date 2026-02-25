@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% block title %}{{ stream.title }} – Live{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="stream-layout">
+        <!-- Video Player -->
+        <div class="stream-main">
+            <div class="stream-player" id="streamPlayer">
+                <div class="stream-player-inner">
+                    {% if stream.status == 'live' %}
+                    <div class="stream-live-badge"><i class="fa-solid fa-circle"></i> LIVE</div>
+                    {% else %}
+                    <div class="stream-ended-badge"><i class="fa-solid fa-flag-checkered"></i> Stream Ended</div>
+                    {% endif %}
+
+                    <div class="stream-viewer-count" id="viewerCount">
+                        <i class="fa-solid fa-eye"></i> <span id="viewerNum">{{ stream.viewer_count }}</span>
+                    </div>
+
+                    <!-- Streamer's video (self) or viewer's received video -->
+                    <video id="streamVideo" autoplay playsinline {% if current_user.is_authenticated and current_user.id == stream.user_id %}muted{% endif %}></video>
+
+                    <div class="stream-camera-view" id="noVideoMsg" {% if stream.status == 'ended' %}style="display:flex"{% endif %}>
+                        <i class="fa-solid fa-{% if stream.status == 'live' %}signal{% else %}flag-checkered{% endif %} fa-3x"></i>
+                        <p>{% if stream.status == 'live' %}Connecting to live stream...{% else %}This stream has ended{% endif %}</p>
+                    </div>
+
+                    <!-- Floating hearts container -->
+                    <div class="hearts-container" id="heartsContainer"></div>
+
+                    <!-- Bottom controls for streamer -->
+                    {% if current_user.is_authenticated and current_user.id == stream.user_id and stream.status == 'live' %}
+                    <div class="streamer-controls">
+                        <button class="stream-ctrl-btn" id="toggleCamBtn"><i class="fa-solid fa-video"></i></button>
+                        <button class="stream-ctrl-btn" id="toggleMicBtn"><i class="fa-solid fa-microphone"></i></button>
+                        <button class="stream-ctrl-btn danger" id="endStreamBtn"><i class="fa-solid fa-phone-slash"></i></button>
+                        <button class="stream-ctrl-btn" id="flipCamBtn"><i class="fa-solid fa-camera-rotate"></i></button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Stream Info -->
+            <div class="stream-info-card">
+                <div class="stream-info-top">
+                    <h1 class="stream-title">{{ stream.title }}</h1>
+                    <div class="stream-meta">
+                        <span><i class="fa-solid fa-eye"></i> <span id="viewerNum2">{{ stream.viewer_count }}</span> watching</span>
+                        <span><i class="fa-solid fa-clock"></i> Started {{ stream.started_at|timeago }}</span>
+                    </div>
+                </div>
+                <div class="stream-author">
+                    <div class="author-avatar">{{ stream.streamer.username[0]|upper }}</div>
+                    <div>
+                        <strong>{{ stream.streamer.username }}</strong>
+                        <small style="display:block;color:var(--text-muted)">{{ stream.streamer.role|replace('_',' ')|title }}</small>
+                    </div>
+                </div>
+                {% if stream.description %}
+                <div class="stream-desc"><p>{{ stream.description }}</p></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Live Chat Sidebar -->
+        <div class="stream-chat" id="chatPanel">
+            <div class="chat-header">
+                <i class="fa-solid fa-comments"></i> Live Chat
+                {% if stream.status == 'live' %}<span class="live-dot"></span>{% endif %}
+                <span class="chat-viewer-tag" id="chatViewerTag"><i class="fa-solid fa-users"></i> <span id="viewerNum3">0</span></span>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-welcome">
+                    <i class="fa-solid fa-hand-wave" style="font-size:2rem;color:var(--amber)"></i>
+                    <p>Welcome to the live chat!</p>
+                    <small>Be respectful and follow community guidelines.</small>
+                </div>
+            </div>
+
+            {% if stream.status == 'live' %}
+            <div class="chat-actions">
+                {% if current_user.is_authenticated %}
+                <button class="heart-btn" id="heartBtn" title="Send heart"><i class="fa-solid fa-heart"></i></button>
+                {% endif %}
+            </div>
+            <div class="chat-input-wrap">
+                {% if current_user.is_authenticated %}
+                <input type="text" class="chat-input" placeholder="Say something..." id="chatInput" maxlength="500" autocomplete="off">
+                <button class="chat-send" id="chatSend"><i class="fa-solid fa-paper-plane"></i></button>
+                {% else %}
+                <div class="chat-login-prompt">
+                    <a href="{{ url_for('auth.login') }}">Login</a> to chat
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="chat-disabled">
+                <p><i class="fa-solid fa-lock"></i> Chat is closed</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Socket.IO & WebRTC Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+<script>
+const STREAM_ID = {{ stream.id }};
+const IS_STREAMER = {{ 'true' if (current_user.is_authenticated and current_user.id == stream.user_id) else 'false' }};
+const STREAM_STATUS = '{{ stream.status }}';
+const socket = io();
+
+const videoEl = document.getElementById('streamVideo');
+const noVideoMsg = document.getElementById('noVideoMsg');
+const chatMessages = document.getElementById('chatMessages');
+
+// ─── Join Stream Room ─────────────────────────────────────────
+socket.emit('join_stream', { stream_id: STREAM_ID });
+
+// ─── Viewer Count Updates ─────────────────────────────────────
+function updateViewerCount(count) {
+    ['viewerNum', 'viewerNum2', 'viewerNum3'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = count;
+    });
+}
+
+socket.on('viewer_joined', (data) => {
+    updateViewerCount(data.count);
+    addSystemMessage(`${data.username} joined the stream`);
+});
+
+socket.on('viewer_left', (data) => {
+    updateViewerCount(data.count);
+});
+
+socket.on('viewer_count', (data) => {
+    updateViewerCount(data.count);
+});
+
+// ─── Streamer: Broadcast Camera ───────────────────────────────
+let localStream = null;
+let peerConnections = {};
+
+if (IS_STREAMER && STREAM_STATUS === 'live') {
+    (async () => {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: true
+            });
+            videoEl.srcObject = localStream;
+            noVideoMsg.style.display = 'none';
+
+            // Broadcast offer to room
+            const pc = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
+
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    socket.emit('webrtc_ice_candidate', {
+                        stream_id: STREAM_ID,
+                        candidate: e.candidate
+                    });
+                }
+            };
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            socket.emit('webrtc_offer', {
+                stream_id: STREAM_ID,
+                offer: pc.localDescription
+            });
+
+            peerConnections['broadcaster'] = pc;
+
+            // Handle answers from viewers
+            socket.on('webrtc_answer', async (data) => {
+                const pc = peerConnections['broadcaster'];
+                if (pc) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                }
+            });
+
+        } catch (err) {
+            console.error('Camera error:', err);
+            noVideoMsg.innerHTML = '<i class="fa-solid fa-exclamation-triangle fa-3x"></i><p>Camera access denied</p>';
+        }
+    })();
+
+    // Streamer Controls
+    const toggleCam = document.getElementById('toggleCamBtn');
+    const toggleMic = document.getElementById('toggleMicBtn');
+    const flipCam = document.getElementById('flipCamBtn');
+    const endBtn = document.getElementById('endStreamBtn');
+
+    if (toggleCam) toggleCam.addEventListener('click', () => {
+        const track = localStream?.getVideoTracks()[0];
+        if (track) {
+            track.enabled = !track.enabled;
+            toggleCam.innerHTML = track.enabled ? '<i class="fa-solid fa-video"></i>' : '<i class="fa-solid fa-video-slash"></i>';
+            toggleCam.classList.toggle('off', !track.enabled);
+        }
+    });
+
+    if (toggleMic) toggleMic.addEventListener('click', () => {
+        const track = localStream?.getAudioTracks()[0];
+        if (track) {
+            track.enabled = !track.enabled;
+            toggleMic.innerHTML = track.enabled ? '<i class="fa-solid fa-microphone"></i>' : '<i class="fa-solid fa-microphone-slash"></i>';
+            toggleMic.classList.toggle('off', !track.enabled);
+        }
+    });
+
+    if (flipCam) flipCam.addEventListener('click', async () => {
+        const currentTrack = localStream.getVideoTracks()[0];
+        const currentFacing = currentTrack.getSettings().facingMode;
+        const newFacing = currentFacing === 'user' ? 'environment' : 'user';
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newFacing } });
+        const newTrack = newStream.getVideoTracks()[0];
+        const sender = peerConnections['broadcaster']?.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(newTrack);
+        localStream.removeTrack(currentTrack);
+        localStream.addTrack(newTrack);
+        currentTrack.stop();
+        videoEl.srcObject = localStream;
+    });
+
+    if (endBtn) endBtn.addEventListener('click', () => {
+        if (!confirm('End this live stream?')) return;
+        socket.emit('end_stream_live', { stream_id: STREAM_ID });
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        fetch(`/community/stream/${STREAM_ID}/end`, { method: 'POST' })
+            .then(() => window.location.href = '/');
+    });
+}
+
+// ─── Viewer: Receive Stream ───────────────────────────────────
+if (!IS_STREAMER && STREAM_STATUS === 'live') {
+    socket.on('webrtc_offer', async (data) => {
+        const pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
+
+        pc.ontrack = (event) => {
+            videoEl.srcObject = event.streams[0];
+            noVideoMsg.style.display = 'none';
+        };
+
+        pc.onicecandidate = (e) => {
+            if (e.candidate) {
+                socket.emit('webrtc_ice_candidate', {
+                    stream_id: STREAM_ID,
+                    candidate: e.candidate
+                });
+            }
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit('webrtc_answer', {
+            stream_id: STREAM_ID,
+            answer: pc.localDescription
+        });
+
+        peerConnections['viewer'] = pc;
+    });
+
+    socket.on('webrtc_ice_candidate', async (data) => {
+        const pc = peerConnections['viewer'] || peerConnections['broadcaster'];
+        if (pc && data.candidate) {
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } catch (e) { console.log('ICE error:', e); }
+        }
+    });
+
+    // Request stream from broadcaster
+    socket.emit('request_stream', { stream_id: STREAM_ID });
+}
+
+// ─── Stream Ended ─────────────────────────────────────────────
+socket.on('stream_ended', (data) => {
+    noVideoMsg.innerHTML = '<i class="fa-solid fa-flag-checkered fa-3x"></i><p>Stream has ended</p>';
+    noVideoMsg.style.display = 'flex';
+    const badge = document.querySelector('.stream-live-badge');
+    if (badge) {
+        badge.innerHTML = '<i class="fa-solid fa-flag-checkered"></i> ENDED';
+        badge.style.background = 'rgba(0,0,0,0.7)';
+        badge.style.animation = 'none';
+    }
+    addSystemMessage('Stream has ended');
+});
+
+// ─── Live Chat ────────────────────────────────────────────────
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+
+function addChatMessage(username, avatar, message, time) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    div.innerHTML = `
+        <div class="chat-msg-avatar">${avatar}</div>
+        <div class="chat-msg-body">
+            <strong>${username}</strong>
+            <span>${message}</span>
+        </div>
+        <small class="chat-msg-time">${time}</small>
+    `;
+    // Remove welcome message on first chat
+    const welcome = chatMessages.querySelector('.chat-welcome');
+    if (welcome) welcome.remove();
+
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addSystemMessage(text) {
+    const div = document.createElement('div');
+    div.className = 'chat-system-msg';
+    div.textContent = text;
+    const welcome = chatMessages.querySelector('.chat-welcome');
+    if (welcome) welcome.remove();
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+socket.on('new_chat_message', (data) => {
+    addChatMessage(data.username, data.avatar, data.message, data.time);
+});
+
+if (chatInput && chatSend) {
+    function sendMessage() {
+        const msg = chatInput.value.trim();
+        if (!msg) return;
+        socket.emit('chat_message', { stream_id: STREAM_ID, message: msg });
+        chatInput.value = '';
+        chatInput.focus();
+    }
+
+    chatSend.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+}
+
+// ─── Heart Reactions ──────────────────────────────────────────
+const heartBtn = document.getElementById('heartBtn');
+const heartsContainer = document.getElementById('heartsContainer');
+
+if (heartBtn) {
+    heartBtn.addEventListener('click', () => {
+        socket.emit('heart_reaction', { stream_id: STREAM_ID });
+    });
+}
+
+socket.on('heart_animation', (data) => {
+    createHeart();
+});
+
+function createHeart() {
+    const heart = document.createElement('div');
+    heart.className = 'floating-heart';
+    heart.innerHTML = '<i class="fa-solid fa-heart"></i>';
+    heart.style.left = (Math.random() * 60 + 20) + '%';
+    heart.style.color = ['#dc2626','#ec4899','#f97316','#8b5cf6','#0ea5e9'][Math.floor(Math.random()*5)];
+    heart.style.fontSize = (Math.random() * 16 + 16) + 'px';
+    heartsContainer.appendChild(heart);
+    setTimeout(() => heart.remove(), 2000);
+}
+
+// ─── Cleanup on page leave ────────────────────────────────────
+window.addEventListener('beforeunload', () => {
+    socket.emit('leave_stream', { stream_id: STREAM_ID });
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+});
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Edit: {{ article.title }}{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header"><span class="page-icon">✏️</span><h1>Edit Submission</h1></div>
+    <div class="form-card">
+        <form method="POST" enctype="multipart/form-data" class="submit-form">
+            <div class="form-row"><div class="form-group full"><label>📌 Title *</label><input type="text" name="title" required minlength="10" value="{{ article.title }}"></div></div>
+            <div class="form-row"><div class="form-group full"><label>📝 Description *</label><textarea name="description" required minlength="20" rows="2">{{ article.description }}</textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>📰 Content *</label><textarea name="content" required minlength="50" rows="10">{{ article.content }}</textarea></div></div>
+            <div class="form-row two-col">
+                <div class="form-group"><label>📂 Category *</label><select name="category_id" required>{% for cat in categories %}<option value="{{ cat.id }}" {% if cat.id == article.category_id %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>📍 Location *</label><input type="text" name="location" required value="{{ article.location }}"></div>
+            </div>
+            <div class="form-row two-col">
+                <div class="form-group"><label>📅 Event Date</label><input type="date" name="event_date" value="{{ article.event_date.strftime('%Y-%m-%d') if article.event_date else '' }}"></div>
+                <div class="form-group"><label>🏷️ Tags</label><input type="text" name="tags" value="{{ article.tags or '' }}"></div>
+            </div>
+            <div class="form-row two-col">
+                <div class="form-group"><label>🖼️ New Featured Image</label><input type="file" name="featured_image" accept="image/*" class="file-input"></div>
+                <div class="form-group"><label>📹 Video URL</label><input type="url" name="video_url" value="{{ article.video_url or '' }}"></div>
+            </div>
+            <button type="submit" class="btn btn-accent btn-lg">Resubmit for Review →</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

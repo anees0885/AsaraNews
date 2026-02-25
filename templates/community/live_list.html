@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Live Streams{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <i class="fa-solid fa-tower-broadcast page-icon" style="color:#dc2626"></i>
+        <h1>Live Streams</h1>
+        <p>Watch real-time broadcasts from your community</p>
+    </div>
+
+    {% if active_streams %}
+    <h2 class="section-title"><i class="fa-solid fa-circle title-icon" style="color:#dc2626;animation:pulse 1.5s infinite;font-size:.6rem"></i> Live Now</h2>
+    <div class="streams-grid">
+        {% for stream in active_streams %}
+        <a href="{{ url_for('community.stream_view', stream_id=stream.id) }}" class="stream-card live">
+            <div class="stream-card-thumb">
+                <div class="stream-live-tag"><i class="fa-solid fa-circle"></i> LIVE</div>
+                <div class="stream-viewers-tag"><i class="fa-solid fa-eye"></i> {{ stream.viewer_count }}</div>
+                <i class="fa-solid fa-play fa-2x"></i>
+            </div>
+            <div class="stream-card-body">
+                <div class="stream-card-avatar">{{ stream.streamer.username[0]|upper }}</div>
+                <div>
+                    <h3>{{ stream.title }}</h3>
+                    <span>{{ stream.streamer.username }} · Started {{ stream.started_at|timeago }}</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fa-solid fa-satellite-dish empty-icon"></i>
+        <h3>No Live Streams Right Now</h3>
+        <p>Be the first to go live! Click the Create button to start broadcasting.</p>
+    </div>
+    {% endif %}
+
+    {% if past_streams %}
+    <h2 class="section-title" style="margin-top:36px"><i class="fa-solid fa-clock-rotate-left title-icon"></i> Recent Streams</h2>
+    <div class="streams-grid">
+        {% for stream in past_streams %}
+        <a href="{{ url_for('community.stream_view', stream_id=stream.id) }}" class="stream-card ended">
+            <div class="stream-card-thumb ended-thumb">
+                <div class="stream-ended-tag"><i class="fa-solid fa-flag-checkered"></i> Ended</div>
+                <i class="fa-solid fa-play fa-2x"></i>
+            </div>
+            <div class="stream-card-body">
+                <div class="stream-card-avatar">{{ stream.streamer.username[0]|upper }}</div>
+                <div>
+                    <h3>{{ stream.title }}</h3>
+                    <span>{{ stream.streamer.username }} · {{ stream.peak_viewers }} peak viewers</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

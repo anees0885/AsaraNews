@@ -1,0 +1,45 @@
+{% extends 'admin/base_admin.html' %}
+{% block admin_title %}Settings & Logs{% endblock %}
+{% block page_title %}⚙️ Settings & Audit Logs{% endblock %}
+{% block admin_content %}
+{% if config %}
+<div class="admin-panel">
+    <h2 class="panel-title">🤖 AI Moderation Thresholds</h2>
+    <form method="POST" class="admin-form settings-form">
+        <div class="form-row two-col">
+            <div class="form-group"><label>Auto-Publish Threshold (0-100)</label><input type="number" name="auto_threshold" value="{{ config.AUTO_PUBLISH_THRESHOLD }}" min="0" max="100"></div>
+            <div class="form-group"><label>Review Threshold (0-100)</label><input type="number" name="review_threshold" value="{{ config.REVIEW_THRESHOLD }}" min="0" max="100"></div>
+        </div>
+        <p class="form-hint">0–Auto → Auto-publish for trusted reporters · Auto–Review → Admin review · Review+ → Hold & alert admin</p>
+        <button type="submit" class="btn btn-accent">Save Thresholds</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="admin-panel">
+    <h2 class="panel-title">📋 Audit Logs</h2>
+    <div class="data-table-wrap">
+        <table class="data-table">
+            <thead><tr><th>Action</th><th>Details</th><th>User</th><th>IP</th><th>Time</th></tr></thead>
+            <tbody>
+                {% for log in logs.items %}
+                <tr>
+                    <td><span class="action-badge">{{ log.action }}</span></td>
+                    <td>{{ (log.details or '')[:60] }}</td>
+                    <td>{{ log.user.username if log.user else 'System' }}</td>
+                    <td>{{ log.ip_address or '—' }}</td>
+                    <td>{{ log.created_at|timeago }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if logs.has_next or logs.has_prev %}
+    <div class="pagination">
+        {% if logs.has_prev %}<a href="?page={{ logs.prev_num }}" class="page-btn">←</a>{% endif %}
+        {% for p in logs.iter_pages() %}{% if p %}<a href="?page={{ p }}" class="page-btn {% if p == logs.page %}active{% endif %}">{{ p }}</a>{% else %}<span>...</span>{% endif %}{% endfor %}
+        {% if logs.has_next %}<a href="?page={{ logs.next_num }}" class="page-btn">→</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

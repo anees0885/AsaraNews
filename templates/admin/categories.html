@@ -1,0 +1,39 @@
+{% extends 'admin/base_admin.html' %}
+{% block admin_title %}Categories{% endblock %}
+{% block page_title %}📂 Category Management{% endblock %}
+{% block admin_content %}
+<div class="admin-grid-2">
+    <div class="admin-panel">
+        <h2 class="panel-title">➕ Add Category</h2>
+        <form method="POST" class="admin-form">
+            <div class="form-group"><label>Name</label><input type="text" name="name" required></div>
+            <div class="form-group"><label>Icon (emoji)</label><input type="text" name="icon" value="📰" maxlength="10"></div>
+            <div class="form-group"><label>Priority</label><input type="number" name="priority" value="0" min="0"></div>
+            <div class="form-group"><label>Description</label><textarea name="description" rows="2"></textarea></div>
+            <button type="submit" class="btn btn-accent">Create Category</button>
+        </form>
+    </div>
+    <div class="admin-panel">
+        <h2 class="panel-title">📋 Categories ({{ categories|length }})</h2>
+        {% for cat in categories %}
+        <div class="list-item">
+            <div class="list-item-info">
+                <span class="list-icon">{{ cat.icon }}</span>
+                <strong>{{ cat.name }}</strong>
+                <span class="list-meta">Priority: {{ cat.priority }} · {% if cat.is_active %}Active{% else %}Disabled{% endif %}</span>
+            </div>
+            <div class="list-item-actions">
+                <form method="POST" action="{{ url_for('admin.edit_category', cat_id=cat.id) }}" class="inline-form">
+                    <input type="hidden" name="name" value="{{ cat.name }}">
+                    <input type="hidden" name="icon" value="{{ cat.icon }}">
+                    <input type="hidden" name="priority" value="{{ cat.priority }}">
+                    <input type="hidden" name="is_active" {% if not cat.is_active %}value="on"{% endif %}>
+                    <button class="btn btn-xs btn-outline">{{ '⏸️' if cat.is_active else '▶️' }}</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.delete_category', cat_id=cat.id) }}"><button class="btn btn-xs btn-red">🗑️</button></form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block title %}Home – Latest Village News{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero / Breaking News Section -->
+    {% if breaking_news %}
+    <section class="hero-section">
+        <div class="hero-badge">🔴 BREAKING NEWS</div>
+        <div class="hero-grid">
+            {% if breaking_news[0] %}
+            <a href="{{ url_for('news.detail', slug=breaking_news[0].slug) }}" class="hero-main">
+                <div class="hero-main-img" style="background-image: url('{{ url_for('static', filename=breaking_news[0].featured_image) if breaking_news[0].featured_image else '' }}')">
+                    <div class="hero-overlay">
+                        <span class="hero-category">{{ breaking_news[0].category.icon }} {{ breaking_news[0].category.name }}</span>
+                        <h1 class="hero-title">{{ breaking_news[0].title }}</h1>
+                        <p class="hero-desc">{{ breaking_news[0].description[:150] }}</p>
+                        <div class="hero-meta">
+                            <span>👤 {{ breaking_news[0].author.username }}</span>
+                            <span>📅 {{ breaking_news[0].created_at|timeago }}</span>
+                            <span>👁️ {{ breaking_news[0].view_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endif %}
+            <div class="hero-side">
+                {% for news in breaking_news[1:4] %}
+                <a href="{{ url_for('news.detail', slug=news.slug) }}" class="hero-side-card">
+                    <div class="hero-side-img" style="background-image: url('{{ url_for('static', filename=news.featured_image) if news.featured_image else '' }}')"></div>
+                    <div class="hero-side-info">
+                        <span class="hero-side-cat">{{ news.category.icon }} {{ news.category.name }}</span>
+                        <h3>{{ news.title }}</h3>
+                        <span class="hero-side-time">{{ news.created_at|timeago }}</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Categories Strip -->
+    <section class="categories-strip">
+        <h2 class="section-title"><span class="title-icon">📂</span> Categories</h2>
+        <div class="categories-scroll">
+            {% for cat in categories %}
+            <a href="{{ url_for('public.category', slug=cat.slug) }}" class="category-chip">
+                <span class="chip-icon">{{ cat.icon }}</span>
+                <span>{{ cat.name }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+        <!-- News Feed -->
+        <div class="feed-main">
+            <!-- Trending Section -->
+            {% if trending %}
+            <section class="trending-section">
+                <h2 class="section-title"><span class="title-icon">🔥</span> Trending Now</h2>
+                <div class="trending-grid">
+                    {% for news in trending[:6] %}
+                    <a href="{{ url_for('news.detail', slug=news.slug) }}" class="trending-card">
+                        <div class="trending-img" style="background-image: url('{{ url_for('static', filename=news.featured_image) if news.featured_image else '' }}')">
+                            <span class="trending-rank">#{{ loop.index }}</span>
+                        </div>
+                        <div class="trending-info">
+                            <span class="trending-cat">{{ news.category.icon }} {{ news.category.name }}</span>
+                            <h3>{{ news.title }}</h3>
+                            <div class="trending-stats">
+                                <span>👁️ {{ news.view_count }}</span>
+                                <span>❤️ {{ news.like_count }}</span>
+                                <span>💬 {{ news.comment_count }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Latest News -->
+            <section class="latest-section">
+                <h2 class="section-title"><span class="title-icon">📰</span> Latest News</h2>
+                <div class="news-grid">
+                    {% for news in latest.items %}
+                    <a href="{{ url_for('news.detail', slug=news.slug) }}" class="news-card">
+                        <div class="news-card-img" style="background-image: url('{{ url_for('static', filename=news.featured_image) if news.featured_image else '' }}')">
+                            <span class="news-card-cat">{{ news.category.icon }} {{ news.category.name }}</span>
+                        </div>
+                        <div class="news-card-body">
+                            <h3 class="news-card-title">{{ news.title }}</h3>
+                            <p class="news-card-desc">{{ news.description[:120] }}...</p>
+                            <div class="news-card-meta">
+                                <span>👤 {{ news.author.username }}</span>
+                                <span>{{ news.created_at|timeago }}</span>
+                            </div>
+                            <div class="news-card-stats">
+                                <span>👁️ {{ news.view_count }}</span>
+                                <span>❤️ {{ news.like_count }}</span>
+                                <span>💬 {{ news.comment_count }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+
+                {% if latest.has_next or latest.has_prev %}
+                <div class="pagination">
+                    {% if latest.has_prev %}
+                    <a href="?page={{ latest.prev_num }}" class="page-btn">← Previous</a>
+                    {% endif %}
+                    {% for p in latest.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <a href="?page={{ p }}" class="page-btn {% if p == latest.page %}active{% endif %}">{{ p }}</a>
+                        {% else %}
+                        <span class="page-dots">...</span>
+                        {% endif %}
+                    {% endfor %}
+                    {% if latest.has_next %}
+                    <a href="?page={{ latest.next_num }}" class="page-btn">Next →</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Polls Widget -->
+            {% if polls %}
+            <div class="sidebar-widget">
+                <h3 class="widget-title">📊 Quick Poll</h3>
+                {% for poll in polls[:1] %}
+                <div class="poll-widget" data-poll-id="{{ poll.id }}">
+                    <p class="poll-question">{{ poll.question }}</p>
+                    <div class="poll-options">
+                        {% for option in poll.get_options() %}
+                        <button class="poll-option-btn" onclick="votePoll({{ poll.id }}, {{ loop.index0 }})">
+                            {{ option }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <div class="poll-results" style="display:none;"></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Upcoming Events -->
+            {% if upcoming_events %}
+            <div class="sidebar-widget">
+                <h3 class="widget-title">📅 Upcoming Events</h3>
+                {% for event in upcoming_events %}
+                <div class="event-mini-card">
+                    <div class="event-date-badge">
+                        <span class="event-day">{{ event.event_date.strftime('%d') }}</span>
+                        <span class="event-month">{{ event.event_date.strftime('%b') }}</span>
+                    </div>
+                    <div class="event-mini-info">
+                        <h4>{{ event.title }}</h4>
+                        <span>📍 {{ event.location }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                <a href="{{ url_for('public.events') }}" class="widget-link">View All Events →</a>
+            </div>
+            {% endif %}
+
+            <!-- Submit News CTA -->
+            <div class="sidebar-widget cta-widget">
+                <div class="cta-content">
+                    <h3>📝 Have News?</h3>
+                    <p>Share what's happening in your village!</p>
+                    <a href="{{ url_for('news.submit') }}" class="btn btn-accent">Submit News</a>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

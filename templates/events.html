@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Events{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header"><span class="page-icon">📅</span><h1>Village Events</h1></div>
+    {% if upcoming %}
+    <section><h2 class="section-title"><span class="title-icon">🗓️</span> Upcoming Events</h2>
+    <div class="events-grid">
+        {% for event in upcoming %}
+        <div class="event-card">
+            <div class="event-card-date"><span class="event-big-day">{{ event.event_date.strftime('%d') }}</span><span class="event-big-month">{{ event.event_date.strftime('%B %Y') }}</span></div>
+            <div class="event-card-body">
+                <h3>{{ event.title }}</h3>
+                <p>{{ event.description[:150] }}</p>
+                <div class="event-card-meta">
+                    <span>📍 {{ event.location }}</span>
+                    {% if event.event_time %}<span>🕐 {{ event.event_time }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div></section>
+    {% endif %}
+    {% if past %}
+    <section><h2 class="section-title"><span class="title-icon">📋</span> Past Events</h2>
+    <div class="events-grid past-events">
+        {% for event in past %}
+        <div class="event-card faded">
+            <div class="event-card-date"><span class="event-big-day">{{ event.event_date.strftime('%d') }}</span><span class="event-big-month">{{ event.event_date.strftime('%b %Y') }}</span></div>
+            <div class="event-card-body"><h3>{{ event.title }}</h3><p>{{ event.description[:100] }}</p><span>📍 {{ event.location }}</span></div>
+        </div>
+        {% endfor %}
+    </div></section>
+    {% endif %}
+    {% if not upcoming and not past %}<div class="empty-state"><span class="empty-icon">📅</span><h3>No events scheduled</h3></div>{% endif %}
+</div>
+{% endblock %}
