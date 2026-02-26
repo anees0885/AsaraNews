@@ -155,12 +155,14 @@
       </div>
     </nav>
 
-    <!-- Welcome Banner -->
+    <!-- Welcome Banner (only on homepage) -->
+    {% if request.endpoint == 'public.index' %}
     <div class="welcome-banner">
       <div class="container">
         <h2 class="welcome-text"><i class="fa-solid fa-leaf"></i> Welcome to <span>Asara</span> <i class="fa-solid fa-leaf"></i></h2>
       </div>
     </div>
+    {% endif %}
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
