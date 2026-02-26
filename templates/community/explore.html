@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% block title %}Explore Videos{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Immersive Full Screen Mode */
+.top-bar, .main-header, .site-footer { display: none !important; }
+body { padding-bottom: 0 !important; background: #000; margin: 0; overflow: hidden; }
+main { padding: 0 !important; margin: 0 !important; max-width: 100%; }
+
+/* Mobile safe area for nav */
+.explore-container { height: 100dvh; height: 100vh; width: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.explore-container::-webkit-scrollbar { display: none; }
+
+.video-card { height: 100%; width: 100%; max-width: 600px; margin: 0 auto; position: relative; scroll-snap-align: start; scroll-snap-stop: always; background: #000; flex-shrink: 0; }
+.video-player { width: 100%; height: 100%; object-fit: cover; }
+
+/* Overlays */
+.video-overlay-gradient { position: absolute; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%); pointer-events: none; }
+.top-gradient { position: absolute; top: 0; left: 0; right: 0; height: 15%; background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%); pointer-events: none; z-index: 10; }
+
+.explore-title { position: absolute; top: 20px; left: 20px; color: #fff; font-size: 1.2rem; font-weight: 800; z-index: 11; font-family: 'Outfit', sans-serif; letter-spacing: 1px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+/* Right Action Sidebar */
+.video-actions { position: absolute; right: 12px; bottom: 90px; display: flex; flex-direction: column; gap: 20px; align-items: center; z-index: 20; }
+.action-btn { background: none; border: none; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-shadow: 0 2px 10px rgba(0,0,0,0.8); transition: transform 0.2s; }
+.action-btn:active { transform: scale(0.9); }
+.action-btn i { font-size: 2rem; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
+.action-btn .count { font-size: 0.8rem; font-weight: 700; }
+.like-btn.liked i { color: #ef4444; }
+
+/* Avatar in Actions */
+.action-avatar-wrap { position: relative; margin-bottom: 10px; }
+.action-avatar { border: 2px solid #fff; }
+.action-follow-btn { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #ef4444; color: #fff; border: none; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+
+/* Bottom Info */
+.video-info { position: absolute; left: 16px; bottom: 85px; right: 70px; z-index: 20; color: #fff; }
+.user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.user-row strong { font-size: 1rem; font-weight: 700; text-shadow: 0 1px 5px rgba(0,0,0,0.8); }
+.badge-reporter { color: #22c55e; font-size: 0.9rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+.badge-admin { color: #3b82f6; font-size: 0.9rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+
+.video-caption { font-size: 0.9rem; line-height: 1.4; text-shadow: 0 1px 5px rgba(0,0,0,0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Comment Panel */
+.comments-panel-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100000; opacity: 0; transition: opacity 0.3s; }
+.comments-panel-overlay.open { display: block; opacity: 1; }
+.comments-panel-container { position: fixed; bottom: 0; left: 0; right: 0; height: 65vh; background: var(--bg-card); border-radius: 20px 20px 0 0; z-index: 100001; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); display: flex; flex-direction: column; }
+.comments-panel-container.open { transform: translateY(0); }
+.cp-header { padding: 16px; text-align: center; border-bottom: 1px solid var(--border); position: relative; }
+.cp-header h3 { font-size: 1rem; font-weight: 700; }
+.cp-close { position: absolute; right: 16px; top: 16px; background: none; border: none; font-size: 1.2rem; color: var(--text-primary); cursor: pointer; }
+.cp-body { flex: 1; overflow-y: auto; padding: 16px; }
+.cp-footer { padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); display: flex; gap: 10px; }
+.cp-input { flex: 1; background: var(--bg-body); border: 1px solid var(--border); border-radius: 20px; padding: 10px 16px; font-size: 0.9rem; color: var(--text-primary); outline: none; }
+.cp-send { background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer; padding: 0 8px; }
+
+@media(min-width: 769px) { /* Adjust for Desktop */
+  body { padding-bottom: 0 !important; background: var(--bg-body) !important; overflow: auto !important; }
+  .top-bar, .main-header { display: flex !important; }
+  .explore-container { height: calc(100vh - 140px); margin: 20px auto; max-width: 450px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+  .video-actions { bottom: 30px; }
+  .video-info { bottom: 25px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="explore-container" id="exploreContainer">
+    <div class="explore-title">Explore</div>
+    
+    {% if posts %}
+        {% for post in posts %}
+        <div class="video-card" data-id="{{ post.id }}">
+            <video class="video-player" src="{{ url_for('static', filename='uploads/posts/' + post.video) }}" loop playsinline controlsList="nodownload"></video>
+            
+            <div class="top-gradient"></div>
+            <div class="video-overlay-gradient"></div>
+            
+            <div class="video-actions">
+                <div class="action-avatar-wrap">
+                    <a href="{{ url_for('community.profile', user_id=post.author.id) }}">
+                        {% if post.author.profile_pic and post.author.profile_pic != 'default_avatar.png' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + post.author.profile_pic) }}" class="avatar-placeholder action-avatar" style="width:40px;height:40px;font-size:1rem;">
+                        {% else %}
+                        <div class="avatar-placeholder action-avatar" style="width:40px;height:40px;font-size:1.2rem;">{{ post.author.username[0]|upper }}</div>
+                        {% endif %}
+                    </a>
+                    {% if current_user.is_authenticated and current_user.id != post.author.id and not current_user.is_following(post.author) %}
+                    <button class="action-follow-btn" onclick="followUser(this, {{ post.author.id }})"><i class="fa-solid fa-plus"></i></button>
+                    {% endif %}
+                </div>
+                
+                <button class="action-btn like-btn" onclick="toggleLike(this, {{ post.id }})">
+                    <i class="fa-solid fa-heart"></i>
+                    <span class="count">{{ post.like_count }}</span>
+                </button>
+                
+                <button class="action-btn comment-btn" onclick="openComments({{ post.id }})">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span class="count">{{ post.comment_count }}</span>
+                </button>
+                
+                <button class="action-btn share-btn" onclick="shareVideo({{ post.id }})">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Share</span>
+                </button>
+            </div>
+            
+            <div class="video-info">
+                <div class="user-row">
+                    <a href="{{ url_for('community.profile', user_id=post.author.id) }}" style="text-decoration:none;color:#fff;">
+                        <strong>{{ post.author.username }}</strong>
+                    </a>
+                    {% if post.author.role == 'reporter' %}
+                    <i class="fa-solid fa-certificate badge-reporter" title="Reporter"></i>
+                    {% elif post.author.role in ('admin', 'super_admin') %}
+                    <i class="fa-solid fa-circle-check badge-admin" title="Admin"></i>
+                    {% endif %}
+                </div>
+                <p class="video-caption">{{ post.content }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;padding:20px;">
+            <i class="fa-solid fa-video-slash" style="font-size:4rem;margin-bottom:20px;opacity:0.5;"></i>
+            <h2>No Videos Yet</h2>
+            <p style="opacity:0.7;margin-bottom:20px;">Be the first to upload a video update!</p>
+            <a href="{{ url_for('community.create_post') }}" class="btn" style="background:var(--accent);color:#fff;"><i class="fa-solid fa-plus"></i> Create Post</a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Comment Panel -->
+<div class="comments-panel-overlay" id="cpOverlay"></div>
+<div class="comments-panel-container" id="cpContainer">
+    <div class="cp-header">
+        <h3>Comments</h3>
+        <button class="cp-close" onclick="closeComments()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="cp-body" id="cpBody">
+        <p style="text-align:center;color:var(--text-muted);margin-top:20px;">Comments are here.</p>
+        <!-- Comments injected here -->
+    </div>
+    <div class="cp-footer">
+        <input type="text" id="cpInput" class="cp-input" placeholder="Add a comment...">
+        <button class="cp-send" onclick="submitComment()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script>
+// Logic for Intersection Observer (Autoplay and pause)
+const videos = document.querySelectorAll('.video-player');
+let currentPostId = null;
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        const vid = entry.target;
+        const card = vid.closest('.video-card');
+        const postId = card ? card.dataset.id : null;
+        
+        if (entry.isIntersecting) {
+            vid.play().catch(e => console.log("Autoplay prevented:", e));
+            // Log view
+            if (postId) {
+                fetch(`/community/post/${postId}/view`, {method: 'POST'});
+            }
+        } else {
+            vid.pause();
+            vid.currentTime = 0; // reset to beginning
+        }
+    });
+}, { threshold: 0.6 });
+
+videos.forEach(v => {
+    observer.observe(v);
+    
+    // Tap to play/pause
+    v.addEventListener('click', () => {
+        if (v.paused) v.play();
+        else v.pause();
+    });
+});
+
+// Like functionality
+async function toggleLike(btn, postId) {
+    try {
+        const res = await fetch(`/community/post/${postId}/like`, {method: 'POST'});
+        const data = await res.json();
+        
+        const icon = btn.querySelector('i');
+        const count = btn.querySelector('.count');
+        
+        if (data.likes > parseInt(count.textContent || '0')) {
+            btn.classList.add('liked');
+            icon.classList.remove('fa-heart');
+            icon.classList.add('fa-solid', 'fa-heart');
+            // Pop animation
+            icon.style.transform = 'scale(1.3)';
+            setTimeout(() => icon.style.transform = 'scale(1)', 200);
+        } else {
+            btn.classList.remove('liked');
+        }
+        count.textContent = data.likes;
+    } catch (e) { console.error("Error toggling like", e); }
+}
+
+// Follow user
+async function followUser(btn, userId) {
+    try {
+        const res = await fetch(`/community/profile/${userId}/follow`, {method: 'POST'});
+        const data = await res.json();
+        if (data.action === 'followed') {
+            btn.style.display = 'none'; // hide the plus button
+        }
+    } catch(e) { console.error(e); }
+}
+
+// Comments Logic
+const cpOverlay = document.getElementById('cpOverlay');
+const cpContainer = document.getElementById('cpContainer');
+const cpInput = document.getElementById('cpInput');
+
+function openComments(postId) {
+    currentPostId = postId;
+    cpOverlay.classList.add('open');
+    cpContainer.classList.add('open');
+}
+
+function closeComments() {
+    cpOverlay.classList.remove('open');
+    cpContainer.classList.remove('open');
+    currentPostId = null;
+}
+
+cpOverlay.addEventListener('click', closeComments);
+
+async function submitComment() {
+    if (!currentPostId || !cpInput.value.trim()) return;
+    
+    const formData = new FormData();
+    formData.append('content', cpInput.value);
+    
+    try {
+        const res = await fetch(`/community/post/${currentPostId}/comment`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Update UI count
+            const countSpan = document.querySelector(`.video-card[data-id="${currentPostId}"] .comment-btn .count`);
+            if (countSpan) countSpan.textContent = data.comments;
+            cpInput.value = '';
+            
+            // Add dummy comment to panel
+            const body = document.getElementById('cpBody');
+            const p = document.createElement('div');
+            p.style.marginBottom = '12px';
+            p.innerHTML = `<strong>You:</strong> ${formData.get('content')}`;
+            body.appendChild(p);
+        }
+    } catch(e) { console.error(e); }
+}
+
+function shareVideo(postId) {
+    const url = window.location.origin + '/community/explore?post=' + postId;
+    if (navigator.share) {
+        navigator.share({
+            title: 'Asara News - Explore',
+            url: url
+        });
+    } else {
+        navigator.clipboard.writeText(url);
+        alert('Link copied to clipboard!');
+    }
+}
+</script>
+{% endblock %}

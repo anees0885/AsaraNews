@@ -346,7 +346,10 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     image = db.Column(db.String(256), nullable=True)
+    video = db.Column(db.String(256), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    view_count = db.Column(db.Integer, default=0)
 
     like_count = db.Column(db.Integer, default=0)
     comment_count = db.Column(db.Integer, default=0)
