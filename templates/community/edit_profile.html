@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+  <div class="container">
+    <div class="edit-profile-card">
+      <h2><i class="fa-solid fa-user-pen"></i> Edit Profile</h2>
+
+      <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
+        <div class="edit-avatar-section">
+          {% if current_user.profile_pic and current_user.profile_pic != 'default_avatar.png' %}
+          <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_pic) }}" alt="Avatar" class="edit-avatar-img">
+          {% else %}
+          <div class="avatar-placeholder large"><i class="fa-solid fa-user"></i></div>
+          {% endif %}
+          <label class="avatar-upload-btn">
+            <i class="fa-solid fa-camera"></i> Change Photo
+            <input type="file" name="profile_pic" accept="image/*" hidden>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="username"><i class="fa-solid fa-at"></i> Username</label>
+          <input type="text" id="username" name="username" value="{{ current_user.username }}" class="form-input" maxlength="80" required>
+        </div>
+
+        <div class="form-group">
+          <label for="bio"><i class="fa-solid fa-quote-left"></i> Bio</label>
+          <textarea id="bio" name="bio" class="form-input" rows="4" maxlength="500" placeholder="Tell something about yourself...">{{ current_user.bio or '' }}</textarea>
+          <small class="char-count"><span id="bioCount">{{ (current_user.bio or '')|length }}</span>/500</small>
+        </div>
+
+        <div class="edit-profile-actions">
+          <button type="submit" class="btn-profile follow"><i class="fa-solid fa-check"></i> Save Changes</button>
+          <a href="{{ url_for('community.profile', user_id=current_user.id) }}" class="btn-profile edit"><i class="fa-solid fa-xmark"></i> Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const bioInput = document.getElementById('bio');
+const bioCount = document.getElementById('bioCount');
+if (bioInput) {
+  bioInput.addEventListener('input', () => {
+    bioCount.textContent = bioInput.value.length;
+  });
+}
+</script>
+{% endblock %}

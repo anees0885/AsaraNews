@@ -34,6 +34,21 @@ class User(UserMixin, db.Model):
     comments = db.relationship('Comment', backref='user', lazy='dynamic')
     notifications = db.relationship('Notification', backref='user', lazy='dynamic')
 
+    # Follow relationships
+    followers = db.relationship('Follow', foreign_keys='Follow.followed_id', backref='followed_user', lazy='dynamic')
+    following = db.relationship('Follow', foreign_keys='Follow.follower_id', backref='follower_user', lazy='dynamic')
+
+    @property
+    def followers_count(self):
+        return self.followers.count()
+
+    @property
+    def following_count(self):
+        return self.following.count()
+
+    def is_following(self, user):
+        return self.following.filter_by(followed_id=user.id).first() is not None
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -343,3 +358,17 @@ class Post(db.Model):
 
     def __repr__(self):
         return f'<Post by {self.user_id}>'
+
+
+# ─── Follow Model ─────────────────────────────────────────────
+class Follow(db.Model):
+    __tablename__ = 'follows'
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
+
+    def __repr__(self):
+        return f'<Follow {self.follower_id} -> {self.followed_id}>'

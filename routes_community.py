@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, LiveStream, Post
+from models import db, LiveStream, Post, User, News, Follow
 from utils import save_uploaded_file, log_audit
 
 community_bp = Blueprint('community', __name__, url_prefix='/community')
@@ -143,3 +143,95 @@ def delete_post(post_id):
     db.session.commit()
     flash('Post deleted.', 'success')
     return redirect(url_for('community.posts_feed'))
+
+
+# ─── Profile ──────────────────────────────────────────────────
+@community_bp.route('/profile/<int:user_id>')
+def profile(user_id):
+    user = User.query.get_or_404(user_id)
+    tab = request.args.get('tab', 'posts')
+
+    posts = Post.query.filter_by(user_id=user.id, is_active=True)\
+        .order_by(Post.created_at.desc()).all()
+    news = News.query.filter_by(author_id=user.id, status='published')\
+        .order_by(News.published_at.desc()).all()
+    streams = LiveStream.query.filter_by(user_id=user.id)\
+        .order_by(LiveStream.started_at.desc()).all()
+
+    is_following = False
+    if current_user.is_authenticated and current_user.id != user.id:
+        is_following = current_user.is_following(user)
+
+    return render_template('community/profile.html',
+        profile_user=user, posts=posts, news_list=news,
+        streams=streams, is_following=is_following, active_tab=tab)
+
+
+@community_bp.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        bio = request.form.get('bio', '').strip()
+
+        if username and username != current_user.username:
+            existing = User.query.filter_by(username=username).first()
+            if existing:
+                flash('Username already taken.', 'error')
+                return redirect(url_for('community.edit_profile'))
+            current_user.username = username
+
+        current_user.bio = bio[:500] if bio else None
+
+        # Handle profile pic upload
+        if 'profile_pic' in request.files and request.files['profile_pic'].filename:
+            filename = save_uploaded_file(request.files['profile_pic'], 'profiles')
+            if filename:
+                current_user.profile_pic = filename
+
+        db.session.commit()
+        log_audit(current_user.id, 'edit_profile', 'Updated profile')
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('community.profile', user_id=current_user.id))
+
+    return render_template('community/edit_profile.html')
+
+
+@community_bp.route('/profile/<int:user_id>/follow', methods=['POST'])
+@login_required
+def toggle_follow(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        return jsonify({'error': 'Cannot follow yourself'}), 400
+
+    existing = Follow.query.filter_by(
+        follower_id=current_user.id, followed_id=user.id).first()
+
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        action = 'unfollowed'
+    else:
+        follow = Follow(follower_id=current_user.id, followed_id=user.id)
+        db.session.add(follow)
+        db.session.commit()
+        action = 'followed'
+
+    return jsonify({
+        'action': action,
+        'followers_count': user.followers_count
+    })
+
+
+@community_bp.route('/news/<int:news_id>/delete', methods=['POST'])
+@login_required
+def delete_news(news_id):
+    article = News.query.get_or_404(news_id)
+    if article.author_id != current_user.id and current_user.role not in ('admin', 'super_admin'):
+        flash('Unauthorized.', 'error')
+        return redirect(url_for('community.profile', user_id=current_user.id))
+
+    db.session.delete(article)
+    db.session.commit()
+    flash('News article deleted.', 'success')
+    return redirect(url_for('community.profile', user_id=current_user.id))

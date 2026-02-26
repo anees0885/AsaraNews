@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.username }} - Profile{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+  <!-- Profile Header -->
+  <div class="profile-header">
+    <div class="container">
+      <div class="profile-top">
+        <div class="profile-avatar">
+          {% if profile_user.profile_pic and profile_user.profile_pic != 'default_avatar.png' %}
+          <img src="{{ url_for('static', filename='uploads/profiles/' + profile_user.profile_pic) }}" alt="{{ profile_user.username }}">
+          {% else %}
+          <div class="avatar-placeholder"><i class="fa-solid fa-user"></i></div>
+          {% endif %}
+        </div>
+        <div class="profile-stats">
+          <div class="stat-item">
+            <strong>{{ posts|length + news_list|length }}</strong>
+            <span>Posts</span>
+          </div>
+          <div class="stat-item" id="followersCount">
+            <strong>{{ profile_user.followers_count }}</strong>
+            <span>Followers</span>
+          </div>
+          <div class="stat-item">
+            <strong>{{ profile_user.following_count }}</strong>
+            <span>Following</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-info">
+        <h2 class="profile-name">{{ profile_user.username }}</h2>
+        {% if profile_user.role == 'reporter' %}
+        <span class="profile-badge"><i class="fa-solid fa-certificate"></i> Reporter</span>
+        {% elif profile_user.role in ('admin', 'super_admin') %}
+        <span class="profile-badge admin"><i class="fa-solid fa-shield-halved"></i> Admin</span>
+        {% endif %}
+        {% if profile_user.bio %}
+        <p class="profile-bio">{{ profile_user.bio }}</p>
+        {% endif %}
+      </div>
+
+      <div class="profile-actions">
+        {% if current_user.is_authenticated and current_user.id == profile_user.id %}
+        <a href="{{ url_for('community.edit_profile') }}" class="btn-profile edit"><i class="fa-solid fa-pen-to-square"></i> Edit Profile</a>
+        {% elif current_user.is_authenticated %}
+        <button class="btn-profile {% if is_following %}following{% else %}follow{% endif %}" id="followBtn" data-userid="{{ profile_user.id }}">
+          {% if is_following %}<i class="fa-solid fa-user-check"></i> Following{% else %}<i class="fa-solid fa-user-plus"></i> Follow{% endif %}
+        </button>
+        {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn-profile follow"><i class="fa-solid fa-user-plus"></i> Follow</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Tabs -->
+  <div class="profile-tabs">
+    <div class="container">
+      <a href="?tab=posts" class="profile-tab {% if active_tab == 'posts' %}active{% endif %}"><i class="fa-solid fa-th"></i> <span>Posts</span></a>
+      <a href="?tab=news" class="profile-tab {% if active_tab == 'news' %}active{% endif %}"><i class="fa-solid fa-newspaper"></i> <span>News</span></a>
+      <a href="?tab=live" class="profile-tab {% if active_tab == 'live' %}active{% endif %}"><i class="fa-solid fa-tower-broadcast"></i> <span>Live</span></a>
+    </div>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="profile-content">
+    <div class="container">
+
+      {% if active_tab == 'posts' %}
+      <!-- Posts Grid -->
+      {% if posts %}
+      <div class="profile-grid">
+        {% for post in posts %}
+        <div class="profile-grid-item">
+          {% if post.image %}
+          <img src="{{ url_for('static', filename='uploads/posts/' + post.image) }}" alt="Post">
+          {% else %}
+          <div class="grid-text-post">
+            <p>{{ post.content[:100] }}{% if post.content|length > 100 %}...{% endif %}</p>
+          </div>
+          {% endif %}
+          <div class="grid-overlay">
+            <span><i class="fa-solid fa-heart"></i> {{ post.like_count }}</span>
+            <span><i class="fa-solid fa-comment"></i> {{ post.comment_count }}</span>
+          </div>
+          {% if current_user.is_authenticated and current_user.id == profile_user.id %}
+          <form method="POST" action="{{ url_for('community.delete_post', post_id=post.id) }}" class="grid-delete" onsubmit="return confirm('Delete this post?')">
+            <button type="submit"><i class="fa-solid fa-trash"></i></button>
+          </form>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="profile-empty"><i class="fa-solid fa-camera"></i><p>No posts yet</p></div>
+      {% endif %}
+
+      {% elif active_tab == 'news' %}
+      <!-- News Grid -->
+      {% if news_list %}
+      <div class="profile-grid">
+        {% for article in news_list %}
+        <div class="profile-grid-item">
+          {% if article.featured_image %}
+          <img src="{{ url_for('static', filename='uploads/' + article.featured_image) }}" alt="{{ article.title }}">
+          {% else %}
+          <div class="grid-text-post news-post">
+            <p>{{ article.title[:80] }}</p>
+          </div>
+          {% endif %}
+          <div class="grid-overlay">
+            <span><i class="fa-solid fa-eye"></i> {{ article.views }}</span>
+            <span><i class="fa-solid fa-heart"></i> {{ article.like_count }}</span>
+          </div>
+          {% if current_user.is_authenticated and current_user.id == profile_user.id %}
+          <div class="grid-manage">
+            <a href="{{ url_for('news.edit_news', news_id=article.id) }}" class="grid-edit"><i class="fa-solid fa-pen"></i></a>
+            <form method="POST" action="{{ url_for('community.delete_news', news_id=article.id) }}" class="grid-delete" onsubmit="return confirm('Delete this news?')">
+              <button type="submit"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="profile-empty"><i class="fa-solid fa-newspaper"></i><p>No news articles yet</p></div>
+      {% endif %}
+
+      {% elif active_tab == 'live' %}
+      <!-- Live Streams -->
+      {% if streams %}
+      <div class="profile-grid">
+        {% for stream in streams %}
+        <div class="profile-grid-item live-item">
+          <div class="grid-text-post live-post">
+            <i class="fa-solid fa-tower-broadcast"></i>
+            <p>{{ stream.title[:60] }}</p>
+            <small>{{ stream.started_at.strftime('%d %b %Y') }}</small>
+          </div>
+          <div class="grid-overlay">
+            <span><i class="fa-solid fa-eye"></i> {{ stream.peak_viewers }}</span>
+            <span class="live-status {{ stream.status }}">{{ stream.status|upper }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="profile-empty"><i class="fa-solid fa-tower-broadcast"></i><p>No live streams yet</p></div>
+      {% endif %}
+
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<script>
+// Follow/Unfollow
+const followBtn = document.getElementById('followBtn');
+if (followBtn) {
+  followBtn.addEventListener('click', async function() {
+    const userId = this.dataset.userid;
+    try {
+      const res = await fetch(`/community/profile/${userId}/follow`, {method:'POST'});
+      const data = await res.json();
+      if (data.action === 'followed') {
+        this.className = 'btn-profile following';
+        this.innerHTML = '<i class="fa-solid fa-user-check"></i> Following';
+      } else {
+        this.className = 'btn-profile follow';
+        this.innerHTML = '<i class="fa-solid fa-user-plus"></i> Follow';
+      }
+      document.querySelector('#followersCount strong').textContent = data.followers_count;
+    } catch(e) { console.error(e); }
+  });
+}
+</script>
+{% endblock %}
