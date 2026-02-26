@@ -769,3 +769,36 @@ img{max-width:100%;height:auto}
     .auth-card{padding:16px;margin:0 6px}
 }
 
+/* Welcome Banner */
+.welcome-banner {
+    padding: 0;
+    margin: 0;
+    background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
+    text-align: center;
+    overflow: hidden;
+}
+.welcome-text {
+    padding: 0;
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    animation: bounceUpDown 2s ease-in-out infinite;
+    display: inline-block;
+}
+.welcome-text span {
+    color: var(--accent);
+    font-size: 1.8rem;
+}
+.welcome-text i {
+    color: #22c55e;
+    font-size: 1.1rem;
+    margin: 0 6px;
+}
+@keyframes bounceUpDown {
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-8px); }
+    50% { transform: translateY(0); }
+    75% { transform: translateY(4px); }
+}
