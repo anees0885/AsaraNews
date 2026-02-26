@@ -1,5 +1,5 @@
 """
-AI Moderation Engine for Gaav Asara News
+AI Moderation Engine for Asara News
 ─────────────────────────────────────────
 Provides text similarity detection, AI-generated text probability,
 keyword risk scanning, and user behavior scoring.
@@ -8,11 +8,17 @@ keyword risk scanning, and user behavior scoring.
 import re
 import math
 import json
-import numpy as np
 from collections import Counter
 from datetime import datetime, timedelta
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+
+# Lazy imports — sklearn/numpy may not be available on Vercel
+try:
+    import numpy as np
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
 
 
 class ModerationEngine:
@@ -20,11 +26,14 @@ class ModerationEngine:
 
     def __init__(self, app_config):
         self.config = app_config
-        self.vectorizer = TfidfVectorizer(
-            max_features=5000,
-            stop_words='english',
-            ngram_range=(1, 2)
-        )
+        if HAS_SKLEARN:
+            self.vectorizer = TfidfVectorizer(
+                max_features=5000,
+                stop_words='english',
+                ngram_range=(1, 2)
+            )
+        else:
+            self.vectorizer = None
         self._is_fitted = False
 
     def analyze(self, title, content, description, user, existing_news_texts=None):
@@ -81,24 +90,30 @@ class ModerationEngine:
         }
 
     def _check_similarity(self, text, existing_texts):
-        """Check similarity against existing news using TF-IDF + cosine similarity."""
+        """Check similarity against existing news."""
         if not existing_texts:
             return 0.0
 
         try:
-            all_texts = existing_texts + [text]
-            tfidf_matrix = self.vectorizer.fit_transform(all_texts)
-            self._is_fitted = True
-
-            # Compare the new text against all existing
-            new_vector = tfidf_matrix[-1]
-            existing_matrix = tfidf_matrix[:-1]
-
-            similarities = cosine_similarity(new_vector, existing_matrix).flatten()
-            max_similarity = float(np.max(similarities)) if len(similarities) > 0 else 0.0
-
-            # Scale to 0-100
-            return max_similarity * 100
+            if HAS_SKLEARN:
+                all_texts = existing_texts + [text]
+                tfidf_matrix = self.vectorizer.fit_transform(all_texts)
+                self._is_fitted = True
+                new_vector = tfidf_matrix[-1]
+                existing_matrix = tfidf_matrix[:-1]
+                similarities = cosine_similarity(new_vector, existing_matrix).flatten()
+                max_similarity = float(np.max(similarities)) if len(similarities) > 0 else 0.0
+                return max_similarity * 100
+            else:
+                # Pure Python fallback: word overlap
+                new_words = set(text.lower().split())
+                max_sim = 0.0
+                for existing in existing_texts:
+                    existing_words = set(existing.lower().split())
+                    if new_words and existing_words:
+                        overlap = len(new_words & existing_words) / len(new_words | existing_words)
+                        max_sim = max(max_sim, overlap)
+                return max_sim * 100
         except Exception:
             return 0.0
 
@@ -237,18 +252,19 @@ class ModerationEngine:
             return 'hold'
 
     def _generate_embedding(self, text):
-        """Generate a JSON-serialized TF-IDF embedding for storage."""
+        """Generate a JSON-serialized embedding for storage."""
         try:
-            if self._is_fitted:
-                vector = self.vectorizer.transform([text])
+            if HAS_SKLEARN and self.vectorizer:
+                if self._is_fitted:
+                    vector = self.vectorizer.transform([text])
+                else:
+                    vector = self.vectorizer.fit_transform([text])
+                    self._is_fitted = True
+                dense = vector.toarray()[0]
+                non_zero = {str(i): round(float(v), 4) for i, v in enumerate(dense) if v != 0}
+                return json.dumps(non_zero)
             else:
-                vector = self.vectorizer.fit_transform([text])
-                self._is_fitted = True
-
-            dense = vector.toarray()[0]
-            # Only store non-zero values to save space
-            non_zero = {str(i): round(float(v), 4) for i, v in enumerate(dense) if v != 0}
-            return json.dumps(non_zero)
+                return None
         except Exception:
             return None
 
