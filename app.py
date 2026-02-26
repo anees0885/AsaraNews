@@ -7,10 +7,9 @@ Village news platform with AI moderation & live streaming
 import os
 from flask import Flask, render_template
 from flask_login import LoginManager
-from flask_socketio import SocketIO
 from config import Config
-from models import db, User
-from moderation import get_moderation_engine
+
+IS_VERCEL = os.environ.get('VERCEL', False)
 
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
@@ -20,6 +19,7 @@ login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
+    from models import User
     return User.query.get(int(user_id))
 
 
@@ -27,19 +27,24 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Ensure directories exist
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'news'), exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'news', 'gallery'), exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'events'), exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'avatars'), exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'posts'), exist_ok=True)
+    # Ensure directories exist (skip on read-only filesystems)
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'news'), exist_ok=True)
+        os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'news', 'gallery'), exist_ok=True)
+        os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'events'), exist_ok=True)
+        os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'avatars'), exist_ok=True)
+        os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'posts'), exist_ok=True)
+    except OSError:
+        pass  # Read-only filesystem (Vercel)
 
     # Init extensions
+    from models import db
     db.init_app(app)
     login_manager.init_app(app)
 
     # Init moderation engine
+    from moderation import get_moderation_engine
     get_moderation_engine(app.config)
 
     # Register blueprints
@@ -59,9 +64,14 @@ def create_app():
     app.register_blueprint(api_bp)
     app.register_blueprint(community_bp)
 
-    # Init SocketIO events
-    from socketio_events import register_socketio_events
-    register_socketio_events(socketio)
+    # Init SocketIO events (only in local, not on Vercel)
+    if not IS_VERCEL:
+        from flask_socketio import SocketIO
+        socketio = SocketIO(cors_allowed_origins='*')
+        socketio.init_app(app)
+        from socketio_events import register_socketio_events
+        register_socketio_events(socketio)
+        app.socketio = socketio
 
     # Template context processor
     @app.context_processor
@@ -100,9 +110,11 @@ def create_app():
     return app
 
 
-socketio = SocketIO(cors_allowed_origins='*')
 app = create_app()
-socketio.init_app(app)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=5000, allow_unsafe_werkzeug=True)
+    if not IS_VERCEL:
+        from flask_socketio import SocketIO
+        app.socketio.run(app, debug=True, port=5000, allow_unsafe_werkzeug=True)
+    else:
+        app.run(debug=False)

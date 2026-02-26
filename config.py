@@ -2,13 +2,35 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+# Detect Vercel serverless environment
+IS_VERCEL = os.environ.get('VERCEL', False)
+
+# Supabase PostgreSQL (Session Pooler)
+SUPABASE_DB_URI = os.environ.get(
+    'DATABASE_URL',
+    'postgresql://postgres.spvzvubcbxmlcskwftri:ASARA%40NEWS%400885@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres'
+)
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'gaav-asara-news-secret-key-2026')
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'asara_news.db')
+
+    # Use Supabase PostgreSQL for both local and Vercel
+    SQLALCHEMY_DATABASE_URI = SUPABASE_DB_URI
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_size': 5,
+        'max_overflow': 10
+    }
+
+    if IS_VERCEL:
+        UPLOAD_FOLDER = '/tmp/uploads'
+    else:
+        UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Upload settings
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max
     ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'webm', 'ogg'}
