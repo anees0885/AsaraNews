@@ -771,11 +771,11 @@ img{max-width:100%;height:auto}
 
 /* Welcome Banner */
 .welcome-banner {
-    padding: 6px 0;
+    padding: 12px 0;
     margin: 0;
     background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
     text-align: center;
-    overflow: hidden;
+    overflow: visible;
 }
 .welcome-text {
     padding: 0;
