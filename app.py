@@ -24,7 +24,13 @@ def load_user(user_id):
 
 
 def create_app():
-    app = Flask(__name__)
+    # Use absolute paths so Flask finds static/templates from any entry point (Vercel api/index.py)
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    app = Flask(
+        __name__,
+        static_folder=os.path.join(base_dir, 'static'),
+        template_folder=os.path.join(base_dir, 'templates')
+    )
     app.config.from_object(Config)
 
     # Ensure directories exist (skip on read-only filesystems)
