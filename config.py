@@ -35,6 +35,10 @@ class Config:
     ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'webm', 'ogg'}
 
+    # Cloudinary Direct Upload Config
+    CLOUDINARY_CLOUD_NAME = 'di97xvonh'
+    CLOUDINARY_UPLOAD_PRESET = 'asara_news_preset'
+
     # AI Moderation thresholds
     AUTO_PUBLISH_THRESHOLD = 40      # 0-40 → auto publish for trusted reporters
     REVIEW_THRESHOLD = 70            # 41-70 → admin review

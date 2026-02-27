@@ -97,32 +97,22 @@ def create_post():
             user_id=current_user.id
         )
 
-        # Handle optional image or video
-        if 'media' in request.files and request.files['media'].filename:
-            file = request.files['media']
-            ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-            
-            allowed_image = current_app.config.get('ALLOWED_EXTENSIONS', {'jpg', 'jpeg', 'png', 'gif', 'webp'})
-            allowed_video = current_app.config.get('ALLOWED_VIDEO_EXTENSIONS', {'mp4', 'webm', 'ogg'})
-            
-            if ext in allowed_image:
-                filename = save_uploaded_file(file, 'posts')
-                if filename:
-                    post.image = filename
-            elif ext in allowed_video:
-                filename = save_uploaded_file(file, 'posts')
-                if filename:
-                    post.video = filename
-            else:
-                flash('Invalid file type uploaded.', 'error')
-                return redirect(url_for('community.create_post'))
+        # Handle Cloudinary direct upload URLs (bypassing Vercel payload limits)
+        image_url = request.form.get('image_url', '').strip()
+        video_url = request.form.get('video_url', '').strip()
+
+        if image_url:
+            post.image = image_url
+        if video_url:
+            post.video = video_url
 
         db.session.add(post)
         db.session.commit()
 
         log_audit(current_user.id, 'create_post', f'Created post #{post.id}')
-        flash('Post published successfully!', 'success')
-        return redirect(url_for('community.explore_feed'))
+        
+        # Return JSON explicitly for the fetch API
+        return jsonify({'success': True, 'redirect': url_for('community.explore_feed')})
 
     return render_template('community/create_post.html')
 

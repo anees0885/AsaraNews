@@ -65,12 +65,12 @@ def submit():
         title = sanitize_html(title)
         description = sanitize_html(description)
 
-        # Featured image
-        featured_image = None
-        if 'featured_image' in request.files:
-            file = request.files['featured_image']
-            if file.filename:
-                featured_image = save_uploaded_file(file, 'news')
+        # Featured image & Video URL (from Cloudinary)
+        featured_image = request.form.get('featured_image', '').strip() or None
+        
+        # We also get video_url from Cloudinary if a video was uploaded
+        if not video_url:
+            video_url = request.form.get('video_url', '').strip()
 
         # Generate slug
         slug = generate_unique_slug(title, News)
@@ -110,14 +110,16 @@ def submit():
         db.session.add(news)
         db.session.flush()  # Get news.id
 
-        # Save gallery images
-        gallery_files = request.files.getlist('gallery_images')
-        for gf in gallery_files:
-            if gf.filename:
-                img_path = save_uploaded_file(gf, 'news/gallery')
-                if img_path:
-                    gallery_img = NewsImage(news_id=news.id, image_path=img_path)
+        # Save gallery images (JSON array of URLs from Cloudinary)
+        gallery_data = request.form.get('gallery_images_data', '')
+        if gallery_data:
+            try:
+                gallery_urls = json.loads(gallery_data)
+                for g_url in gallery_urls:
+                    gallery_img = NewsImage(news_id=news.id, image_path=g_url)
                     db.session.add(gallery_img)
+            except Exception:
+                pass
 
         # Moderation log
         mod_log = ModerationLog(

@@ -50,25 +50,175 @@
             </div>
             <div class="form-row two-col">
                 <div class="form-group">
-                    <label>🖼️ Featured Image</label>
-                    <input type="file" name="featured_image" accept="image/*" class="file-input">
+                    <label>🖼️ Featured Media (Image or Video)</label>
+                    <input type="file" id="featuredMediaInput" class="file-input" accept="image/*,video/mp4,video/webm,video/ogg">
+                    <small>Required. Will be shown on homepage/feed.</small>
+                    <input type="hidden" name="featured_image" id="featuredImageHidden">
+                    <input type="hidden" name="video_url" id="videoUrlHidden">
                 </div>
+                <!-- Standard video URL input is removed since they can now upload directly -->
                 <div class="form-group">
-                    <label>📹 Video URL (YouTube/embed)</label>
-                    <input type="url" name="video_url" placeholder="https://..." value="{{ video_url|default('') }}">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group full">
                     <label>📷 Gallery Images (multiple)</label>
-                    <input type="file" name="gallery_images" accept="image/*" multiple class="file-input">
+                    <input type="file" id="galleryMediaInput" accept="image/*" multiple class="file-input">
+                    <small>Optional extra photos.</small>
+                    <input type="hidden" name="gallery_images_data" id="galleryImagesHidden">
                 </div>
             </div>
+            
+            <!-- Progress UI -->
+            <div id="uploadProgressContainer" style="display:none; margin-bottom: 20px; background:var(--bg-body); padding:15px; border-radius:10px; border:1px solid var(--border);">
+                <div style="font-weight:600; font-size: 0.9rem; margin-bottom:4px">Uploading media files directly...</div>
+                <div style="display:flex; justify-content:space-between; font-size: 0.8rem; margin-bottom:4px; color:var(--text-secondary)">
+                    <span id="uploadStatusText">Starting upload...</span>
+                    <span id="uploadPercent">0%</span>
+                </div>
+                <div style="width:100%; height:8px; background:var(--border); border-radius:4px; overflow:hidden;">
+                    <div id="uploadProgressBar" style="width:0%; height:100%; background:var(--accent); transition:width 0.2s;"></div>
+                </div>
+            </div>
+
             <div class="form-info-box">
                 <p>🤖 <strong>AI Moderation:</strong> Your submission will be automatically analyzed for quality and authenticity. Low-risk content from verified reporters may be auto-published. Otherwise, it will go to admin review.</p>
             </div>
-            <button type="submit" class="btn btn-accent btn-lg">Submit for Review →</button>
+            <button type="button" id="submitNewsBtn" class="btn btn-accent btn-lg" onclick="handleNewsSubmit()">Submit for Review →</button>
         </form>
     </div>
 </div>
+
+<script>
+// IMPORTANT: Replaced by backend if set
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/{{ config.get('CLOUDINARY_CLOUD_NAME', '') }}/auto/upload";
+const CLOUDINARY_PRESET = "{{ config.get('CLOUDINARY_UPLOAD_PRESET', '') }}";
+
+async function handleNewsSubmit() {
+    const btn = document.getElementById('submitNewsBtn');
+    const form = document.querySelector('.submit-form');
+    
+    // Basic validation
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    if (!CLOUDINARY_PRESET) {
+        alert("Cloudinary configuration missing on backend! Cannot upload large media.");
+        return;
+    }
+
+    const featuredInput = document.getElementById('featuredMediaInput');
+    const galleryInput = document.getElementById('galleryMediaInput');
+    
+    // If files are selected, we must upload them to Cloudinary first
+    const filesToUpload = [];
+    
+    if (featuredInput.files.length > 0) {
+        filesToUpload.push({ 
+            file: featuredInput.files[0], 
+            type: 'featured',
+            isVideo: featuredInput.files[0].type.startsWith('video/')
+        });
+    }
+    
+    if (galleryInput.files.length > 0) {
+        for (let i = 0; i < galleryInput.files.length; i++) {
+            filesToUpload.push({ 
+                file: galleryInput.files[i], 
+                type: 'gallery' 
+            });
+        }
+    }
+
+    const galleryUrls = [];
+
+    if (filesToUpload.length > 0) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading Media...';
+        
+        const uiContainer = document.getElementById('uploadProgressContainer');
+        const uiStatus = document.getElementById('uploadStatusText');
+        const uiBar = document.getElementById('uploadProgressBar');
+        const uiPercent = document.getElementById('uploadPercent');
+        
+        uiContainer.style.display = 'block';
+
+        for (let i = 0; i < filesToUpload.length; i++) {
+            const item = filesToUpload[i];
+            uiStatus.textContent = `Uploading file ${i + 1} of ${filesToUpload.length} (${item.type})...`;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', item.file);
+                formData.append('upload_preset', CLOUDINARY_PRESET);
+                
+                const secureUrl = await uploadToCloudinaryWithProgress(formData, (percent) => {
+                    // Calculate overall progress across files
+                    const basePercent = (i / filesToUpload.length) * 100;
+                    const filePercent = (percent / filesToUpload.length);
+                    const totalPercent = Math.round(basePercent + filePercent);
+                    
+                    uiBar.style.width = totalPercent + '%';
+                    uiPercent.textContent = totalPercent + '%';
+                });
+                
+                if (item.type === 'featured') {
+                    if (item.isVideo) {
+                        document.getElementById('videoUrlHidden').value = secureUrl;
+                    } else {
+                        document.getElementById('featuredImageHidden').value = secureUrl;
+                    }
+                } else if (item.type === 'gallery') {
+                    galleryUrls.push(secureUrl);
+                }
+                
+            } catch (error) {
+                alert(`Upload failed for file ${item.file.name}: ${error.message}`);
+                btn.disabled = false;
+                btn.innerHTML = 'Submit for Review →';
+                uiContainer.style.display = 'none';
+                return; // Stop submission
+            }
+        }
+        
+        // Save array of gallery URLs as JSON string in hidden input
+        if (galleryUrls.length > 0) {
+            document.getElementById('galleryImagesHidden').value = JSON.stringify(galleryUrls);
+        }
+        
+        uiStatus.textContent = "Upload complete! Saving news...";
+        uiBar.style.width = '100%';
+        uiPercent.textContent = '100%';
+    }
+    
+    // Now submit the form payload to Vercel/Flask (Files are already uploaded)
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing News...';
+    form.submit();
+}
+
+function uploadToCloudinaryWithProgress(formData, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', CLOUDINARY_URL, true);
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                onProgress(percent);
+            }
+        };
+        
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response.secure_url);
+            } else {
+                reject(new Error('Cloudinary error: ' + xhr.responseText));
+            }
+        };
+        
+        xhr.onerror = function() { reject(new Error('Network error during upload')); };
+        xhr.send(formData);
+    });
+}
+</script>
 {% endblock %}

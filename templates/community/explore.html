@@ -73,7 +73,23 @@ main { padding: 0 !important; margin: 0 !important; max-width: 100%; }
     {% if posts %}
         {% for post in posts %}
         <div class="video-card" data-id="{{ post.id }}">
-            <video class="video-player" src="{{ url_for('static', filename='uploads/posts/' + post.video) }}" loop playsinline controlsList="nodownload"></video>
+            {% if post.video %}
+                {% if post.video.startswith('http') %}
+                <video class="video-player" src="{{ post.video }}" loop playsinline controlsList="nodownload"></video>
+                {% else %}
+                <video class="video-player" src="{{ url_for('static', filename='uploads/posts/' + post.video) }}" loop playsinline controlsList="nodownload"></video>
+                {% endif %}
+            {% elif post.image %}
+                {% if post.image.startswith('http') %}
+                <img class="video-player" src="{{ post.image }}" alt="Post image">
+                {% else %}
+                <img class="video-player" src="{{ url_for('static', filename='uploads/posts/' + post.image) }}" alt="Post image">
+                {% endif %}
+            {% else %}
+                <div class="video-player" style="background:#1e293b;display:flex;align-items:center;justify-content:center;color:#fff;padding:20px;text-align:center;font-size:1.2rem;">
+                    {{ post.content }}
+                </div>
+            {% endif %}
             
             <div class="top-gradient"></div>
             <div class="video-overlay-gradient"></div>

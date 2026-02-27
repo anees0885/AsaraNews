@@ -10,7 +10,7 @@
     </div>
 
     <div class="form-card" style="max-width:600px">
-        <form method="POST" enctype="multipart/form-data" class="submit-form">
+        <form id="createPostForm" class="submit-form">
             <div class="post-compose">
                 <div class="post-compose-header">
                     <div class="author-avatar" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">{{ current_user.username[0]|upper }}</div>
@@ -27,12 +27,27 @@
 
                 <div class="form-group">
                     <label><i class="fa-solid fa-photo-film" style="color:#0ea5e9"></i> Add Image or Video (Optional)</label>
-                    <input type="file" name="media" class="file-input" accept="image/*,video/mp4,video/webm,video/ogg">
-                    <small style="color:var(--text-muted);display:block;margin-top:4px">Videos up to 60s recommended for Explore feed</small>
+                    <input type="file" id="mediaInput" class="file-input" accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime">
+                    <small style="color:var(--text-muted);display:block;margin-top:4px">Max video length: 60s recommended</small>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div id="uploadProgressContainer" style="display:none; margin-bottom: 15px;">
+                    <div style="display:flex; justify-content:space-between; font-size: 0.8rem; margin-bottom:4px">
+                        <span>Uploading...</span>
+                        <span id="uploadPercent">0%</span>
+                    </div>
+                    <div style="width:100%; height:8px; background:var(--border); border-radius:4px; overflow:hidden;">
+                        <div id="uploadProgressBar" style="width:0%; height:100%; background:var(--accent); transition:width 0.2s;"></div>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Hidden inputs to store Cloudinary URLs -->
+            <input type="hidden" name="image_url" id="imageUrlInput">
+            <input type="hidden" name="video_url" id="videoUrlInput">
 
-            <button type="submit" class="btn btn-full btn-lg" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff">
+            <button type="button" id="submitBtn" class="btn btn-full btn-lg" onclick="handlePostSubmit()" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff">
                 <i class="fa-solid fa-paper-plane"></i> Publish Post
             </button>
         </form>
@@ -40,10 +55,120 @@
 </div>
 
 <script>
+// IMPORTANT: Replaced by backend if set, otherwise fallback to user's provided details
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/{{ config.get('CLOUDINARY_CLOUD_NAME', '') }}/auto/upload";
+const CLOUDINARY_PRESET = "{{ config.get('CLOUDINARY_UPLOAD_PRESET', '') }}";
+
 const ta = document.getElementById('postContent');
 const cc = document.getElementById('charCount');
 if (ta && cc) {
     ta.addEventListener('input', () => { cc.textContent = ta.value.length; });
+}
+
+async function handlePostSubmit() {
+    const btn = document.getElementById('submitBtn');
+    const mediaInput = document.getElementById('mediaInput');
+    const content = document.getElementById('postContent').value.trim();
+    
+    if (!content) {
+        alert("Post content cannot be empty.");
+        return;
+    }
+    
+    // If no Cloudinary config is set, warn the user (or fallback to traditional submit)
+    if (!CLOUDINARY_PRESET) {
+        alert("Cloudinary configuration missing. Please check your backend.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+    // 1. Upload to Cloudinary if file exists
+    if (mediaInput.files && mediaInput.files[0]) {
+        const file = mediaInput.files[0];
+        const isVideo = file.type.startsWith('video/');
+        
+        document.getElementById('uploadProgressContainer').style.display = 'block';
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_PRESET);
+            
+            const secureUrl = await uploadToCloudinary(formData);
+            
+            if (isVideo) {
+                document.getElementById('videoUrlInput').value = secureUrl;
+            } else {
+                document.getElementById('imageUrlInput').value = secureUrl;
+            }
+        } catch (error) {
+            alert('Upload failed: ' + error.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Publish Post';
+            document.getElementById('uploadProgressContainer').style.display = 'none';
+            return;
+        }
+    }
+    
+    // 2. Submit form to our backend
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving Post...';
+    try {
+        const postData = new FormData();
+        postData.append('content', content);
+        postData.append('image_url', document.getElementById('imageUrlInput').value);
+        postData.append('video_url', document.getElementById('videoUrlInput').value);
+        
+        const response = await fetch("{{ url_for('community.create_post') }}", {
+            method: 'POST',
+            body: postData
+        });
+        
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else {
+            const data = await response.json();
+            if (data.error) alert(data.error);
+            else window.location.href = "{{ url_for('community.explore_feed') }}";
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to submit post.");
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Publish Post';
+    }
+}
+
+// XMLHttpRequest wrapper for upload progress tracking
+function uploadToCloudinary(formData) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', CLOUDINARY_URL, true);
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                document.getElementById('uploadProgressBar').style.width = percent + '%';
+                document.getElementById('uploadPercent').textContent = percent + '%';
+            }
+        };
+        
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response.secure_url);
+            } else {
+                reject(new Error('Cloudinary error: ' + xhr.responseText));
+            }
+        };
+        
+        xhr.onerror = function() {
+            reject(new Error('Network error during upload'));
+        };
+        
+        xhr.send(formData);
+    });
 }
 </script>
 {% endblock %}
