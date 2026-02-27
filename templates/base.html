@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
     <link
@@ -27,33 +27,14 @@
     {% block extra_css %}{% endblock %}
   </head>
   <body>
-    <!-- Top Bar -->
-    <div class="top-bar">
-      <div class="container top-bar-inner">
-        <span class="top-bar-date" id="topDate"></span>
-        <div class="top-bar-links">
-          {% if current_user.is_authenticated %}
-          <span class="top-bar-user"><i class="fa-solid fa-circle-user"></i> {{ current_user.username }}</span>
-          {% if current_user.role in ('admin', 'super_admin') %}
-          <a href="{{ url_for('admin.dashboard') }}"><i class="fa-solid fa-gauge-high"></i> Admin Panel</a>
-          {% endif %} {% if current_user.role == 'reporter' %}
-          <a href="{{ url_for('reporter.dashboard') }}"><i class="fa-solid fa-chart-line"></i> Reporter Dashboard</a>
-          {% endif %}
-          <a href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-          {% else %}
-          <a href="{{ url_for('auth.login') }}"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
-          <a href="{{ url_for('auth.register') }}"><i class="fa-solid fa-user-plus"></i> Register</a>
-          {% endif %}
-        </div>
-      </div>
-    </div>
 
-    <!-- Header -->
-    <header class="main-header">
+    <!-- ═══ Sticky Glassmorphism Header ═══ -->
+    <header class="site-header" id="siteHeader">
       <div class="container header-inner">
+        <!-- Logo -->
         <a href="{{ url_for('public.index') }}" class="logo">
           <div class="logo-icon-wrap">
-            <i class="fa-solid fa-newspaper"></i>
+            <i class="fa-solid fa-seedling"></i>
           </div>
           <div class="logo-text">
             <span class="logo-name">Asara</span>
@@ -61,27 +42,21 @@
           </div>
         </a>
 
-        <div class="header-search" id="headerSearch">
-          <form
-            action="{{ url_for('public.search') }}"
-            method="GET"
-            class="search-form"
-          >
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input
-              type="text"
-              name="q"
-              placeholder="Search news, events, topics..."
-              class="search-input"
-              id="searchInput"
-              autocomplete="off"
-            />
-            <button type="submit" class="search-btn"><i class="fa-solid fa-arrow-right"></i></button>
-          </form>
-          <div class="search-suggestions" id="searchSuggestions"></div>
-        </div>
+        <!-- Desktop Nav -->
+        <nav class="desktop-nav" id="desktopNav">
+          <a href="{{ url_for('public.index') }}" class="nav-link {% if request.endpoint == 'public.index' %}active{% endif %}">Home</a>
+          {% for cat in all_categories[:6] %}
+          <a href="{{ url_for('public.category', slug=cat.slug) }}" class="nav-link {% if request.endpoint == 'public.category' and request.view_args.get('slug') == cat.slug %}active{% endif %}">{{ cat.name }}</a>
+          {% endfor %}
+          <a href="{{ url_for('public.events') }}" class="nav-link {% if request.endpoint == 'public.events' %}active{% endif %}">Events</a>
+        </nav>
 
+        <!-- Right Actions -->
         <div class="header-actions">
+          <button class="search-toggle-btn" id="searchToggle" aria-label="Search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+
           {% if current_user.is_authenticated %}
           <div class="create-btn-wrap">
             <button class="btn-create" id="createBtn">
@@ -111,81 +86,75 @@
               </a>
             </div>
           </div>
+
+          <a href="{{ url_for('community.profile', user_id=current_user.id) }}" class="user-avatar-btn" title="{{ current_user.username }}">
+            <i class="fa-solid fa-circle-user"></i>
+          </a>
+
+          {% if current_user.role in ('admin', 'super_admin') %}
+          <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-ghost" title="Admin Panel"><i class="fa-solid fa-gauge-high"></i></a>
           {% endif %}
-          <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fa-solid fa-bars"></i></button>
+          {% if current_user.role == 'reporter' %}
+          <a href="{{ url_for('reporter.dashboard') }}" class="btn btn-sm btn-ghost" title="Dashboard"><i class="fa-solid fa-chart-line"></i></a>
+          {% endif %}
+
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-ghost-danger" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+
+          {% else %}
+          <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-outline-light">Login</a>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-sm btn-primary-green">Register</a>
+          {% endif %}
+
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+        </div>
+      </div>
+
+      <!-- Search Overlay -->
+      <div class="search-overlay" id="searchOverlay">
+        <div class="container">
+          <form action="{{ url_for('public.search') }}" method="GET" class="search-overlay-form">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="q" placeholder="Search news, events, topics..." id="searchInput" autocomplete="off" />
+            <button type="button" class="search-close-btn" id="searchCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+          </form>
+          <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
       </div>
     </header>
 
-    <!-- Navigation -->
-    <nav class="main-nav" id="mainNav">
-      <div class="container">
-        <ul class="nav-list">
-          <li>
-            <a
-              href="{{ url_for('public.index') }}"
-              class="nav-link {% if request.endpoint == 'public.index' %}active{% endif %}"
-              ><i class="fa-solid fa-house"></i> Home</a
-            >
-          </li>
-          {% for cat in all_categories[:8] %}
-          <li>
-            <a
-              href="{{ url_for('public.category', slug=cat.slug) }}"
-              class="nav-link {% if request.endpoint == 'public.category' and request.view_args.get('slug') == cat.slug %}active{% endif %}"
-              >{{ cat.icon }} {{ cat.name }}</a
-            >
-          </li>
-          {% endfor %}
-          <li>
-            <a
-              href="{{ url_for('public.events') }}"
-              class="nav-link {% if request.endpoint == 'public.events' %}active{% endif %}"
-              ><i class="fa-solid fa-calendar-days"></i> Events</a
-            >
-          </li>
-          <li>
-            <a
-              href="{{ url_for('public.polls') }}"
-              class="nav-link {% if request.endpoint == 'public.polls' %}active{% endif %}"
-              ><i class="fa-solid fa-square-poll-vertical"></i> Polls</a
-            >
-          </li>
-        </ul>
+    <!-- Mobile Side Menu -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+    <div class="mobile-side-menu" id="mobileSideMenu">
+      <div class="msm-header">
+        <span class="msm-brand">Asara News</span>
+        <button class="msm-close" id="msmCloseBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
-    </nav>
-
-    <!-- Welcome Banner (only on homepage) -->
-    {% if request.endpoint == 'public.index' %}
-    <div class="welcome-banner">
-      <div class="container">
-        <h2 class="welcome-text">
-          <i class="fa-solid fa-leaf" style="display:inline-block;animation:waveFloat 2.5s ease-in-out infinite;animation-delay:-0.1s"></i>
-          <span class="wave-letter" style="animation-delay:0.0s">W</span>
-          <span class="wave-letter" style="animation-delay:0.1s">e</span>
-          <span class="wave-letter" style="animation-delay:0.2s">l</span>
-          <span class="wave-letter" style="animation-delay:0.3s">c</span>
-          <span class="wave-letter" style="animation-delay:0.4s">o</span>
-          <span class="wave-letter" style="animation-delay:0.5s">m</span>
-          <span class="wave-letter" style="animation-delay:0.6s">e</span>
-          <span class="wave-space">&nbsp;</span>
-          <span class="wave-letter" style="animation-delay:0.8s">t</span>
-          <span class="wave-letter" style="animation-delay:0.9s">o</span>
-          <span class="wave-space">&nbsp;</span>
-          <span class="welcome-brand wave-brand" style="animation-delay:1.1s">A</span>
-          <span class="welcome-brand wave-brand" style="animation-delay:1.2s">s</span>
-          <span class="welcome-brand wave-brand" style="animation-delay:1.3s">a</span>
-          <span class="welcome-brand wave-brand" style="animation-delay:1.4s">r</span>
-          <span class="welcome-brand wave-brand" style="animation-delay:1.5s">a</span>
-          <i class="fa-solid fa-leaf" style="display:inline-block;animation:waveFloat 2.5s ease-in-out infinite;animation-delay:1.6s"></i>
-        </h2>
-      </div>
+      <nav class="msm-nav">
+        <a href="{{ url_for('public.index') }}"><i class="fa-solid fa-house"></i> Home</a>
+        {% for cat in all_categories[:6] %}
+        <a href="{{ url_for('public.category', slug=cat.slug) }}">{{ cat.icon }} {{ cat.name }}</a>
+        {% endfor %}
+        <a href="{{ url_for('public.events') }}"><i class="fa-solid fa-calendar-days"></i> Events</a>
+        <a href="{{ url_for('public.polls') }}"><i class="fa-solid fa-square-poll-vertical"></i> Polls</a>
+        <hr>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('community.profile', user_id=current_user.id) }}"><i class="fa-solid fa-circle-user"></i> Profile</a>
+        {% if current_user.role in ('admin', 'super_admin') %}
+        <a href="{{ url_for('admin.dashboard') }}"><i class="fa-solid fa-gauge-high"></i> Admin Panel</a>
+        {% endif %}
+        {% if current_user.role == 'reporter' %}
+        <a href="{{ url_for('reporter.dashboard') }}"><i class="fa-solid fa-chart-line"></i> Reporter Dashboard</a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        {% else %}
+        <a href="{{ url_for('auth.login') }}"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
+        <a href="{{ url_for('auth.register') }}"><i class="fa-solid fa-user-plus"></i> Register</a>
+        {% endif %}
+      </nav>
     </div>
-    {% endif %}
 
     <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %} {% if
-    messages %}
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
     <div class="flash-container">
       <div class="container">
         {% for category, message in messages %}
@@ -203,8 +172,8 @@
     <!-- Main Content -->
     <main class="main-content">{% block content %}{% endblock %}</main>
 
-    <!-- Footer -->
-    <footer class="main-footer">
+    <!-- ═══ Footer ═══ -->
+    <footer class="site-footer">
       <div class="footer-wave">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 100" preserveAspectRatio="none">
           <path fill="currentColor" d="M0,40 C360,100 720,0 1080,60 C1260,80 1380,40 1440,50 L1440,100 L0,100 Z"></path>
@@ -215,7 +184,7 @@
           <div class="footer-grid">
             <div class="footer-brand">
               <div class="footer-logo">
-                <div class="logo-icon-wrap small"><i class="fa-solid fa-newspaper"></i></div>
+                <div class="logo-icon-wrap small"><i class="fa-solid fa-seedling"></i></div>
                 <span class="logo-name">Asara News</span>
               </div>
               <p class="footer-desc">
@@ -243,9 +212,7 @@
               <ul>
                 {% for cat in all_categories[:5] %}
                 <li>
-                  <a href="{{ url_for('public.category', slug=cat.slug) }}"
-                    ><i class="fa-solid fa-chevron-right"></i> {{ cat.name }}</a
-                  >
+                  <a href="{{ url_for('public.category', slug=cat.slug) }}"><i class="fa-solid fa-chevron-right"></i> {{ cat.name }}</a>
                 </li>
                 {% endfor %}
               </ul>
@@ -253,15 +220,9 @@
             <div class="footer-links">
               <h4><i class="fa-solid fa-scale-balanced"></i> Legal</h4>
               <ul>
-                <li>
-                  <a href="{{ url_for('public.terms') }}"><i class="fa-solid fa-chevron-right"></i> Terms & Conditions</a>
-                </li>
-                <li>
-                  <a href="{{ url_for('public.privacy') }}"><i class="fa-solid fa-chevron-right"></i> Privacy Policy</a>
-                </li>
-                <li>
-                  <a href="{{ url_for('public.disclaimer') }}"><i class="fa-solid fa-chevron-right"></i> Disclaimer</a>
-                </li>
+                <li><a href="{{ url_for('public.terms') }}"><i class="fa-solid fa-chevron-right"></i> Terms & Conditions</a></li>
+                <li><a href="{{ url_for('public.privacy') }}"><i class="fa-solid fa-chevron-right"></i> Privacy Policy</a></li>
+                <li><a href="{{ url_for('public.disclaimer') }}"><i class="fa-solid fa-chevron-right"></i> Disclaimer</a></li>
               </ul>
             </div>
           </div>
@@ -275,7 +236,7 @@
       </div>
     </footer>
 
-    <!-- Mobile Bottom Navigation -->
+    <!-- ═══ Mobile Bottom Navigation ═══ -->
     <nav class="mobile-bottom-nav" id="mobileBottomNav">
       <a href="{{ url_for('public.index') }}" class="mob-nav-item {% if request.endpoint == 'public.index' %}active{% endif %}">
         <i class="fa-solid fa-house"></i>
@@ -350,34 +311,51 @@
     {% block extra_js %}{% endblock %}
 
     <script>
-      // Set current date
+      // ── Date display
       const d = new Date();
-      const options = {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      };
-      document.getElementById("topDate").textContent = d.toLocaleDateString(
-        "en-IN",
-        options,
-      );
+      const topDateEl = document.getElementById("topDate");
+      if (topDateEl) topDateEl.textContent = d.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
-      // Scroll animations
-      const observer = new IntersectionObserver((entries) => {
+      // ── Search toggle
+      const searchToggle = document.getElementById('searchToggle');
+      const searchOverlay = document.getElementById('searchOverlay');
+      const searchCloseBtn = document.getElementById('searchCloseBtn');
+      if (searchToggle && searchOverlay) {
+        searchToggle.addEventListener('click', () => { searchOverlay.classList.add('open'); searchOverlay.querySelector('input').focus(); });
+        searchCloseBtn.addEventListener('click', () => { searchOverlay.classList.remove('open'); });
+      }
+
+      // ── Mobile side menu
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const mobileSideMenu = document.getElementById('mobileSideMenu');
+      const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+      const msmCloseBtn = document.getElementById('msmCloseBtn');
+      function openMobileMenu() { mobileSideMenu.classList.add('open'); mobileMenuOverlay.classList.add('open'); }
+      function closeMobileMenu() { mobileSideMenu.classList.remove('open'); mobileMenuOverlay.classList.remove('open'); }
+      if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMobileMenu);
+      if (msmCloseBtn) msmCloseBtn.addEventListener('click', closeMobileMenu);
+      if (mobileMenuOverlay) mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+
+      // ── Sticky header shadow on scroll
+      const siteHeader = document.getElementById('siteHeader');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) siteHeader.classList.add('scrolled');
+        else siteHeader.classList.remove('scrolled');
+      });
+
+      // ── Scroll animations
+      const obsv = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('animate-in');
-          }
+          if (entry.isIntersecting) entry.target.classList.add('animate-in');
         });
       }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
-      document.querySelectorAll('.news-card, .trending-card, .event-card, .sidebar-widget, .stat-card, .r-stat-card, .poll-card, .hero-side-card, .category-chip').forEach(el => {
+      document.querySelectorAll('.news-card, .trending-card, .event-card, .sidebar-widget, .stat-card, .r-stat-card, .poll-card, .hero-side-card, .category-chip, .cat-icon-card').forEach(el => {
         el.classList.add('animate-target');
-        observer.observe(el);
+        obsv.observe(el);
       });
 
-      // Mobile Plus Button - Create Modal
+      // ── Mobile Plus Button - Create Modal
       const mobPlusBtn = document.getElementById('mobPlusBtn');
       const mobCreateModal = document.getElementById('mobCreateModal');
       const mobCreateOverlay = document.getElementById('mobCreateOverlay');

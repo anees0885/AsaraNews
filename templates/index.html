@@ -2,15 +2,58 @@
 {% block title %}Home – Latest Village News{% endblock %}
 
 {% block content %}
+
+<!-- ═══ Immersive Hero Section ═══ -->
+<section class="hero-section-new">
+    <div class="hero-bg" style="background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=80')"></div>
+    <div class="hero-gradient-overlay"></div>
+    <div class="hero-content">
+        <p class="hero-welcome-line">🌿 Your Village News Platform</p>
+        <h1 class="hero-headline">Welcome to <span class="brand-highlight">ASARA</span></h1>
+        <p class="hero-subtitle">Your Village. Your Voice. Your Updates.</p>
+        <p class="hero-tagline">Stay informed. Stay connected.</p>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('news.submit') }}" class="hero-cta">
+            <i class="fa-solid fa-plus"></i> Share a Story
+        </a>
+        {% else %}
+        <a href="{{ url_for('auth.register') }}" class="hero-cta">
+            <i class="fa-solid fa-plus"></i> Share a Story
+        </a>
+        {% endif %}
+
+        <!-- Category Icon Row -->
+        <div class="cat-icons-row">
+            <a href="{{ url_for('public.search') }}?q=breaking" class="cat-icon-card">
+                <div class="cat-icon-circle">🔴</div>
+                <span class="cat-icon-label">Breaking</span>
+            </a>
+            {% for cat in categories[:5] %}
+            <a href="{{ url_for('public.category', slug=cat.slug) }}" class="cat-icon-card">
+                <div class="cat-icon-circle">{{ cat.icon }}</div>
+                <span class="cat-icon-label">{{ cat.name }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- Wave Divider -->
+    <div class="hero-wave">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" preserveAspectRatio="none">
+            <path fill="#faf8f5" d="M0,60 C300,120 600,0 900,80 C1100,110 1300,40 1440,70 L1440,120 L0,120 Z"></path>
+        </svg>
+    </div>
+</section>
+
 <div class="container">
-    <!-- Hero / Breaking News Section -->
+    <!-- Breaking News Section -->
     {% if breaking_news %}
-    <section class="hero-section">
+    <section class="hero-section" style="padding-top:30px">
         <div class="hero-badge">🔴 BREAKING NEWS</div>
         <div class="hero-grid">
             {% if breaking_news[0] %}
             <a href="{{ url_for('news.detail', slug=breaking_news[0].slug) }}" class="hero-main">
-                <div class="hero-main-img" style="background-image: url('{{ url_for('static', filename=breaking_news[0].featured_image) if breaking_news[0].featured_image else '' }}')">
+                {% set fi0 = breaking_news[0].featured_image %}
+                <div class="hero-main-img" style="background-image: url('{% if fi0 and fi0.startswith('http') %}{{ fi0 }}{% elif fi0 %}{{ url_for('static', filename=fi0) }}{% endif %}')">
                     <div class="hero-overlay">
                         <span class="hero-category">{{ breaking_news[0].category.icon }} {{ breaking_news[0].category.name }}</span>
                         <h1 class="hero-title">{{ breaking_news[0].title }}</h1>
@@ -27,7 +70,8 @@
             <div class="hero-side">
                 {% for news in breaking_news[1:4] %}
                 <a href="{{ url_for('news.detail', slug=news.slug) }}" class="hero-side-card">
-                    <div class="hero-side-img" style="background-image: url('{{ url_for('static', filename=news.featured_image) if news.featured_image else '' }}')"></div>
+                    {% set fi = news.featured_image %}
+                    <div class="hero-side-img" style="background-image: url('{% if fi and fi.startswith('http') %}{{ fi }}{% elif fi %}{{ url_for('static', filename=fi) }}{% endif %}')"></div>
                     <div class="hero-side-info">
                         <span class="hero-side-cat">{{ news.category.icon }} {{ news.category.name }}</span>
                         <h3>{{ news.title }}</h3>
@@ -64,7 +108,8 @@
                 <div class="trending-grid">
                     {% for news in trending[:6] %}
                     <a href="{{ url_for('news.detail', slug=news.slug) }}" class="trending-card">
-                        <div class="trending-img" style="background-image: url('{{ url_for('static', filename=news.featured_image) if news.featured_image else '' }}')">
+                        {% set tfi = news.featured_image %}
+                        <div class="trending-img" style="background-image: url('{% if tfi and tfi.startswith('http') %}{{ tfi }}{% elif tfi %}{{ url_for('static', filename=tfi) }}{% endif %}')">
                             <span class="trending-rank">#{{ loop.index }}</span>
                         </div>
                         <div class="trending-info">
@@ -88,7 +133,8 @@
                 <div class="news-grid">
                     {% for news in latest.items %}
                     <a href="{{ url_for('news.detail', slug=news.slug) }}" class="news-card">
-                        <div class="news-card-img" style="background-image: url('{{ url_for('static', filename=news.featured_image) if news.featured_image else '' }}')">
+                        {% set lfi = news.featured_image %}
+                        <div class="news-card-img" style="background-image: url('{% if lfi and lfi.startswith('http') %}{{ lfi }}{% elif lfi %}{{ url_for('static', filename=lfi) }}{% endif %}')">
                             <span class="news-card-cat">{{ news.category.icon }} {{ news.category.name }}</span>
                         </div>
                         <div class="news-card-body">
