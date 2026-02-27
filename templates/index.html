@@ -24,11 +24,7 @@
 
         <!-- Category Icon Row -->
         <div class="cat-icons-row">
-            <a href="{{ url_for('public.search') }}?q=breaking" class="cat-icon-card">
-                <div class="cat-icon-circle">🔴</div>
-                <span class="cat-icon-label">Breaking</span>
-            </a>
-            {% for cat in categories[:5] %}
+            {% for cat in categories[:6] %}
             <a href="{{ url_for('public.category', slug=cat.slug) }}" class="cat-icon-card">
                 <div class="cat-icon-circle">{{ cat.icon }}</div>
                 <span class="cat-icon-label">{{ cat.name }}</span>

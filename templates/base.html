@@ -45,7 +45,7 @@
         <!-- Desktop Nav -->
         <nav class="desktop-nav" id="desktopNav">
           <a href="{{ url_for('public.index') }}" class="nav-link {% if request.endpoint == 'public.index' %}active{% endif %}">Home</a>
-          {% for cat in all_categories[:6] %}
+          {% for cat in all_categories[:5] %}
           <a href="{{ url_for('public.category', slug=cat.slug) }}" class="nav-link {% if request.endpoint == 'public.category' and request.view_args.get('slug') == cat.slug %}active{% endif %}">{{ cat.name }}</a>
           {% endfor %}
           <a href="{{ url_for('public.events') }}" class="nav-link {% if request.endpoint == 'public.events' %}active{% endif %}">Events</a>
