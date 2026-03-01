@@ -4,32 +4,32 @@
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Earthy Color Palette ── */
-  --bg-body: #faf8f5;
-  --bg-card: #ffffff;
-  --bg-card-hover: #fefdfb;
-  --bg-glass: rgba(255, 255, 255, 0.82);
-  --bg-input: #f5f1ec;
-  --bg-nav: rgba(15, 30, 20, 0.92);
-  --bg-footer: #1a2e1a;
+  /* ── Slightly Dark Theme Palette ── */
+  --bg-body: #1e1e2e;
+  --bg-card: #2a2a3d;
+  --bg-card-hover: #32324a;
+  --bg-glass: rgba(30, 30, 46, 0.85);
+  --bg-input: #252538;
+  --bg-nav: rgba(15, 15, 25, 0.92);
+  --bg-footer: #141422;
 
-  --green-50: #f0fdf4;
-  --green-100: #dcfce7;
-  --green-200: #bbf7d0;
+  --green-50: rgba(45, 106, 79, 0.12);
+  --green-100: rgba(45, 106, 79, 0.18);
+  --green-200: rgba(82, 183, 136, 0.2);
   --green-400: #4ade80;
   --green-500: #22c55e;
   --green-600: #16a34a;
   --green-700: #15803d;
   --green-800: #166534;
   --green-900: #14532d;
-  --primary: #2d6a4f;
+  --primary: #3da876;
   --primary-light: #52b788;
-  --primary-dark: #1b4332;
+  --primary-dark: #2d6a4f;
 
   --accent: #dc2626;
   --accent-light: #ef4444;
   --accent-dark: #b91c1c;
-  --accent-glow: rgba(220, 38, 38, 0.15);
+  --accent-glow: rgba(220, 38, 38, 0.2);
   --accent-gradient: linear-gradient(135deg, #dc2626, #ea580c);
 
   --saffron: #f4a261;
@@ -43,17 +43,17 @@
   --pink: #ec4899;
   --sky: #0ea5e9;
 
-  --text-primary: #1a1a2e;
-  --text-secondary: #4a5568;
-  --text-muted: #94a3b8;
+  --text-primary: #e8e8f0;
+  --text-secondary: #b0b0c8;
+  --text-muted: #7a7a9a;
   --text-white: #ffffff;
 
-  --border: rgba(0, 0, 0, 0.08);
-  --border-light: rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 10px 50px rgba(0, 0, 0, 0.1);
-  --shadow-color: 0 4px 20px rgba(45, 106, 79, 0.12);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.04);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 10px 50px rgba(0, 0, 0, 0.35);
+  --shadow-color: 0 4px 20px rgba(45, 106, 79, 0.2);
 
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -84,7 +84,6 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
-  padding-top: 85px;
 }
 a {
   color: var(--primary);
@@ -732,6 +731,11 @@ img {
   margin: 8px 16px;
 }
 
+/* ─── Main Content Spacer (non-hero pages) ───── */
+.main-content {
+  padding-top: 85px;
+}
+
 /* ═══ HERO SECTION ═══ */
 .hero-section-new {
   position: relative;
@@ -742,6 +746,8 @@ img {
   justify-content: center;
   overflow: hidden;
   background: #1a2e1a;
+  margin-top: -85px;
+  padding-top: 85px;
 }
 .hero-bg {
   position: absolute;
@@ -764,11 +770,11 @@ img {
   position: relative;
   z-index: 2;
   text-align: center;
-  padding: 60px 20px 40px;
+  padding: 30px 20px 40px;
   max-width: 700px;
 }
 .hero-welcome-line {
-  font-size: 0.85rem;
+  font-size: 1.5rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 4px;
@@ -776,16 +782,40 @@ img {
   margin-bottom: 12px;
 }
 .hero-headline {
-  font-family: var(--font-serif);
-  font-size: 3.5rem;
-  font-weight: 800;
+  font-family: 'Cinzel Decorative', var(--font-serif);
+  font-size: 3.2rem;
+  font-weight: 900;
   color: #fff;
-  line-height: 1.1;
-  margin-bottom: 12px;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+  line-height: 1.15;
+  margin-bottom: 16px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: perspective(500px) rotateX(5deg);
+  text-shadow:
+    0 1px 0 #ccc,
+    0 2px 0 #bbb,
+    0 3px 0 #aaa,
+    0 4px 0 #999,
+    0 5px 0 #888,
+    0 6px 0 #777,
+    0 7px 5px rgba(0,0,0,0.3),
+    0 10px 15px rgba(0,0,0,0.35),
+    0 15px 40px rgba(0,0,0,0.5);
 }
 .hero-headline .brand-highlight {
-  color: var(--saffron);
+  font-family: 'Eczar', cursive !important;
+  font-size: 4.2rem;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #fbbf24;
+  -webkit-text-fill-color: #fbbf24;
+  text-shadow:
+    0 2px 0 #b45309,
+    0 4px 0 #92400e,
+    0 6px 8px rgba(0,0,0,0.4),
+    0 0 20px rgba(251,191,36,0.25);
 }
 .hero-subtitle {
   font-size: 1.15rem;
